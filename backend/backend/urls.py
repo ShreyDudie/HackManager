@@ -21,7 +21,9 @@ from accounts.face_views import FaceRegisterView, FaceVerifyView
 
 urlpatterns = [
     path('api/auth/', include('accounts.urls')),
+    path('api/face/register/', FaceRegisterView.as_view()),
     path('api/face/register', FaceRegisterView.as_view()),
+    path('api/face/verify/', FaceVerifyView.as_view()),
     path('api/face/verify', FaceVerifyView.as_view()),
 ]
 
