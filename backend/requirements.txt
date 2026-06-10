@@ -5,3 +5,4 @@ django-cors-headers>=4.3
 mediapipe==0.10.9
 opencv-python-headless>=4.9
 numpy==1.26.4
+gunicorn>=21.2.0
