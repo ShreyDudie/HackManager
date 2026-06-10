@@ -45,14 +45,24 @@ class LoginView(APIView):
 
 
 # =============================================================================
-# NOTE: The following views were removed because they referenced a Submission
-# model and SubmissionSerializer that did not exist in models.py / serializers.py.
-# Submission logic is now handled entirely on the frontend via localStorage.
-#
-# Removed views:
-#   - AllSubmissionsView
-#   - MySubmissionsView
-#   - JudgeSubmissionsView
-#   - DashboardDataView
-#   - UpdateSubmissionStatusView
+# 🔹 SHARED STATE SYNC — Syncs localStorage data across different browsers
 # =============================================================================
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .models import SharedState
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SharedStateSyncView(APIView):
+    def get(self, request):
+        states = SharedState.objects.all()
+        data = {s.key: s.value for s in states}
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        data = request.data
+        for k, v in data.items():
+            if v is None:
+                SharedState.objects.filter(key=k).delete()
+            else:
+                SharedState.objects.update_or_create(key=k, defaults={"value": str(v)})
+        return Response({"status": "success"}, status=status.HTTP_200_OK)

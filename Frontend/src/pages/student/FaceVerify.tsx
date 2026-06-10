@@ -11,7 +11,7 @@ import { LayoutDashboard, Upload, Github, QrCode, Bell, UserCheck, Camera, Check
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
-import { findUserRegistration, updateRegistration } from "@/lib/storage";
+import { findUserRegistration, updateRegistration, updateMemberVerification } from "@/lib/storage";
 
 const sidebarItems = [
     { to: "/student", label: "Overview", icon: LayoutDashboard },
@@ -33,10 +33,17 @@ export default function FaceVerify() {
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [alreadyCaptured, setAlreadyCaptured] = useState(false);
     const [cameraActive, setCameraActive] = useState(false);
+    const [registering, setRegistering] = useState(false);
 
     // Check if user already has a face image stored
     useEffect(() => {
         if (!user?.email) return;
+        const localFace = localStorage.getItem(`face_${user.email}`);
+        if (localFace) {
+            setCapturedImage(localFace);
+            setAlreadyCaptured(true);
+            return;
+        }
         const reg = findUserRegistration(user.email);
         if (reg?.faceImage) {
             setCapturedImage(reg.faceImage);
@@ -87,7 +94,7 @@ export default function FaceVerify() {
     }, [stream]);
 
     // Capture photo from video feed
-    const capturePhoto = () => {
+    const capturePhoto = async () => {
         if (!videoRef.current || !canvasRef.current) return;
 
         const video = videoRef.current;
@@ -104,25 +111,58 @@ export default function FaceVerify() {
         // Convert to base64 (JPEG for smaller size)
         const imageData = canvas.toDataURL("image/jpeg", 0.7);
 
-        // Save to localStorage through registration
+        // Save to localStorage & backend
         if (user?.email) {
-            const reg = findUserRegistration(user.email);
-            if (reg) {
-                updateRegistration(reg.id, { faceImage: imageData });
-                toast({ title: "Photo Captured!", description: "Your face has been registered for verification." });
-            } else {
+            setRegistering(true);
+            try {
+                // Convert base64 to File object for multipart upload
+                const blob = await (await fetch(imageData)).blob();
+                const file = new File([blob], "face.jpg", { type: "image/jpeg" });
+                
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const token = localStorage.getItem("auth_token");
+                const res = await fetch("http://localhost:8000/api/face/register", {
+                    method: "POST",
+                    headers: {
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: formData,
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || "Failed to register face on server.");
+                }
+
+                // Save local backup in localStorage under account
+                localStorage.setItem(`face_${user.email}`, imageData);
+
+                // Update registration if it exists
+                const reg = findUserRegistration(user.email);
+                if (reg) {
+                    updateRegistration(reg.id, { faceImage: imageData });
+                    const creatorIdx = reg.members.findIndex(m => m.email === user.email);
+                    if (creatorIdx !== -1) {
+                        updateMemberVerification(reg.id, creatorIdx, false, imageData);
+                    }
+                }
+
+                toast({ title: "Photo Captured!", description: "Your face embedding has been successfully registered." });
+                setCapturedImage(imageData);
+                setAlreadyCaptured(true);
+                stopCamera();
+            } catch (err: any) {
                 toast({
-                    title: "Registration Required",
-                    description: "Please register for a hackathon first.",
+                    title: "Registration Failed",
+                    description: err.message || "Could not save face embedding to backend.",
                     variant: "destructive",
                 });
-                return;
+            } finally {
+                setRegistering(false);
             }
         }
-
-        setCapturedImage(imageData);
-        setAlreadyCaptured(true);
-        stopCamera();
     };
 
     return (
@@ -193,13 +233,15 @@ export default function FaceVerify() {
                                         <div className="flex justify-center gap-3">
                                             <button
                                                 onClick={capturePhoto}
-                                                className="btn-primary-glow px-8 py-3 text-sm font-bold"
+                                                disabled={registering}
+                                                className="btn-primary-glow px-8 py-3 text-sm font-bold disabled:opacity-60"
                                             >
-                                                CAPTURE PHOTO
+                                                {registering ? "REGISTERING..." : "CAPTURE PHOTO"}
                                             </button>
                                             <button
                                                 onClick={stopCamera}
-                                                className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+                                                disabled={registering}
+                                                className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-60"
                                             >
                                                 Cancel
                                             </button>

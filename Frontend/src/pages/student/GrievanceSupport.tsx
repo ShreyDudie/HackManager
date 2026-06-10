@@ -40,6 +40,52 @@ const statusColors: Record<string, string> = {
 
 const CATEGORIES = ["Registration", "PPT", "Verification", "Technical", "Other"] as const;
 
+/* ── Markdown Formatter Helper ── */
+function parseInlineFormatting(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const boldText = part.slice(2, -2);
+      return <strong key={index} className="font-semibold text-primary">{boldText}</strong>;
+    }
+    return part;
+  });
+}
+
+function renderFormattedMessage(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, idx) => {
+    const bulletMatch = line.match(/^(\s*)[*\-]\s+(.*)$/);
+    if (bulletMatch) {
+      const content = bulletMatch[2];
+      return (
+        <ul key={idx} className="list-disc pl-4 space-y-0.5 text-xs text-muted-foreground my-0.5">
+          <li>{parseInlineFormatting(content)}</li>
+        </ul>
+      );
+    }
+
+    const numMatch = line.match(/^(\s*)\d+\.\s+(.*)$/);
+    if (numMatch) {
+      const content = numMatch[2];
+      return (
+        <ol key={idx} className="list-decimal pl-4 space-y-0.5 text-xs text-muted-foreground my-0.5">
+          <li>{parseInlineFormatting(content)}</li>
+        </ol>
+      );
+    }
+
+    if (line.trim() === "") {
+      return <div key={idx} className="h-1.5" />;
+    }
+    return (
+      <p key={idx} className="leading-relaxed font-sans text-xs my-0.5 text-foreground">
+        {parseInlineFormatting(line)}
+      </p>
+    );
+  });
+}
+
 export default function GrievanceSupport() {
     const { user } = useAuth();
     const [tab, setTab] = useState<"grievances" | "ai">("grievances");
@@ -243,7 +289,7 @@ export default function GrievanceSupport() {
                         </>
                     ) : (
                         /* AI Chat tab */
-                        <div className="glass-card flex flex-col" style={{ height: "calc(100vh - 280px)", minHeight: 400 }}>
+                        <div className="glass-card flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: 600 }}>
                             <div className="border-b border-border/50 px-6 py-4 flex items-center gap-2">
                                 <Bot className="h-5 w-5 text-primary" />
                                 <h2 className="font-display text-lg font-semibold">AI Support Assistant</h2>
@@ -258,7 +304,7 @@ export default function GrievanceSupport() {
                                 {chatMessages.map((m, i) => (
                                     <div key={i} className={`flex ${m.role === "assistant" ? "justify-start" : "justify-end"}`}>
                                         <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${m.role === "assistant" ? "bg-secondary" : "bg-primary/10"}`}>
-                                            <p className="whitespace-pre-wrap">{m.content}</p>
+                                            <div className="space-y-1">{renderFormattedMessage(m.content)}</div>
                                         </div>
                                     </div>
                                 ))}

@@ -52,11 +52,9 @@ class SignupSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
-            role=validated_data['role']
+            role=validated_data['role'],
+            phone_number=phone if phone else None
         )
-        if phone:
-            user.phone_number = phone
-            user.save()
         return user
 
 

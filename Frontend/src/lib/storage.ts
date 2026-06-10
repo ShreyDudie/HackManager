@@ -181,12 +181,19 @@ export interface JudgeAssignment {
     status: "Pending" | "Evaluated";
 }
 
+export interface ProjectFeature {
+    name: string;
+    status: "Working" | "Partially Implemented" | "Mocked/Planned" | "Unknown";
+    details?: string;
+}
+
 export interface ProjectSnapshot {
     teamId: string;
     hackathonId: string;
     summary: string;
     techStack: string[];
     keyFeatures: string[];
+    features?: ProjectFeature[];
     cachedAt: string;
 }
 
@@ -588,6 +595,9 @@ export function setGitHubSubmission(sub: GitHubSubmission): void {
     );
     if (idx !== -1) { all[idx] = sub; } else { all.push(sub); }
     writeArray(KEYS.GITHUB_SUBMISSIONS, all);
+
+    // Automatically invalidate judge's AI cache and snapshots for this team
+    invalidateSubmissionCache(sub.hackathonId, sub.userEmail);
 }
 
 /* ================================================================
@@ -613,6 +623,91 @@ export function setPPTSubmission(sub: PPTSubmission): void {
     );
     if (idx !== -1) { all[idx] = sub; } else { all.push(sub); }
     writeArray(KEYS.PPT_SUBMISSIONS, all);
+
+    // Automatically invalidate judge's AI cache and snapshots for this team
+    invalidateSubmissionCache(sub.hackathonId, sub.userEmail);
+}
+
+export function invalidateSubmissionCache(hackathonId: string, userEmail: string): void {
+    const reg = findRegistration(userEmail, hackathonId);
+    const regId = reg?.id || "";
+
+    // Construct all candidate emails for this team (lead + members)
+    const emails = [userEmail];
+    if (reg) {
+        if (reg.userEmail && !emails.includes(reg.userEmail)) {
+            emails.push(reg.userEmail);
+        }
+        if (reg.members) {
+            reg.members.forEach((m) => {
+                if (m.email && !emails.includes(m.email)) {
+                    emails.push(m.email);
+                }
+            });
+        }
+    }
+
+    // 1. Delete from AI Cache
+    const allAiCache = readArray<AiEvaluation>(KEYS.AI_CACHE);
+    const filteredAiCache = allAiCache.filter((c) => {
+        const isMatch =
+            c.submissionId === `${hackathonId}_${userEmail}` ||
+            (regId ? c.submissionId === `${hackathonId}_${regId}` : false) ||
+            emails.some((email) => c.submissionId === `${hackathonId}_${email}`);
+        return !isMatch;
+    });
+    writeArray(KEYS.AI_CACHE, filteredAiCache);
+
+    // 2. Delete from Project Snapshots
+    const allSnapshots = readArray<ProjectSnapshot>(KEYS.PROJECT_SNAPSHOTS);
+    const filteredSnapshots = allSnapshots.filter((s) => {
+        if (s.hackathonId !== hackathonId) return true;
+        const isMatch =
+            s.teamId === userEmail ||
+            (regId ? s.teamId === regId : false) ||
+            emails.includes(s.teamId);
+        return !isMatch;
+    });
+    writeArray(KEYS.PROJECT_SNAPSHOTS, filteredSnapshots);
+
+    // Get up-to-date github/ppt details for this team
+    const githubs = readArray<GitHubSubmission>(KEYS.GITHUB_SUBMISSIONS);
+    const subGithub = githubs.find((g) => g.hackathonId === hackathonId && emails.includes(g.userEmail));
+    const newGithubUrl = subGithub?.url || null;
+
+    const ppts = getAllPPTSubmissions(hackathonId);
+    const subPpt = ppts.find((p) => emails.includes(p.userEmail));
+    const newPptName = subPpt?.name || null;
+    const newPptLink = subPpt?.link || null;
+
+    // 3. Reset Judge Assignments
+    const allAssignments = readArray<JudgeAssignment>(KEYS.JUDGE_ASSIGNMENTS);
+    let changed = false;
+    const updatedAssignments = allAssignments.map((a) => {
+        const isMatch =
+            a.hackathonId === hackathonId &&
+            (a.teamId === userEmail || (regId && a.teamId === regId) || emails.includes(a.teamId));
+
+        if (isMatch) {
+            changed = true;
+            return {
+                ...a,
+                aiScore: null,
+                aiSummary: null,
+                aiStrengths: null,
+                aiWeaknesses: null,
+                repoContent: null,
+                pptContent: null,
+                githubUrl: newGithubUrl,
+                pptName: newPptName,
+                pptLink: newPptLink,
+            };
+        }
+        return a;
+    });
+    if (changed) {
+        writeArray(KEYS.JUDGE_ASSIGNMENTS, updatedAssignments);
+    }
 }
 
 /* ================================================================

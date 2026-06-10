@@ -17,9 +17,12 @@ Including another URLconf
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from accounts.face_views import FaceRegisterView, FaceVerifyView
 
 urlpatterns = [
     path('api/auth/', include('accounts.urls')),
+    path('api/face/register', FaceRegisterView.as_view()),
+    path('api/face/verify', FaceVerifyView.as_view()),
 ]
 
 if settings.DEBUG:

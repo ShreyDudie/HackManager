@@ -5,7 +5,7 @@
 // =============================================================================
 
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { LayoutDashboard, Trophy, Bell, HelpCircle, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, HelpCircle, ArrowLeft, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
@@ -18,8 +18,7 @@ import { createHackathon, type Hackathon } from "@/lib/storage";
 
 const sidebarItems = [
   { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-  { to: "/admin/leaderboard", label: "Leaderboard", icon: Trophy },
-  { to: "/admin/announcements", label: "Announcements", icon: Bell },
+  { to: "/admin/qr-monitor", label: "QR Monitor", icon: QrCode },
   { to: "/helpline", label: "Helpline", icon: HelpCircle },
 ];
 

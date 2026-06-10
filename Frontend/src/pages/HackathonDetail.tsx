@@ -7,8 +7,8 @@
 
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
-  LayoutDashboard, Trophy, Bell, HelpCircle, ArrowLeft,
-  PlusCircle, Trash2, Download, Check, X, Camera, UserCheck, Loader2
+  LayoutDashboard, HelpCircle, ArrowLeft,
+  PlusCircle, Trash2, Download, Check, X, Camera, UserCheck, Loader2, QrCode
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
@@ -56,8 +56,7 @@ import {
 
 const sidebarItems = [
   { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-  { to: "/admin/leaderboard", label: "Leaderboard", icon: Trophy },
-  { to: "/admin/announcements", label: "Announcements", icon: Bell },
+  { to: "/admin/qr-monitor", label: "QR Monitor", icon: QrCode },
   { to: "/helpline", label: "Helpline", icon: HelpCircle },
 ];
 
@@ -128,7 +127,7 @@ export default function HackathonDetail() {
   const [judgeName, setJudgeName] = useState("");
 
   // Patch 9: per-member webcam verification
-  const [verifyTarget, setVerifyTarget] = useState<{ regId: string; memberIdx: number; storedFace: string | null } | null>(null);
+  const [verifyTarget, setVerifyTarget] = useState<{ regId: string; memberIdx: number; storedFace: string | null; email?: string } | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [similarity, setSimilarity] = useState<number | null>(null);
@@ -136,31 +135,7 @@ export default function HackathonDetail() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    const h = getHackathon(id);
-    if (!h) return;
-    setHackathon(h);
-    setName(h.name);
-    setDescription(h.description || h.desc || "");
-    setStartDate(h.startDate);
-    setEndDate(h.endDate);
-    setRounds(h.rounds || []);
-    setMinTeam(h.minTeamSize || "2");
-    setMaxTeam(h.maxTeamSize || "5");
-    setCriteria(h.criteria || []);
-    setAiWeight(h.aiWeight ?? 50);
-
-    setParticipants(getRegistrations(id));
-    setAnnouncements(getNotifications(id));
-    const assignments = getJudgeAssignments(undefined, id);
-    setJudgeAssignments(assignments);
-    // Patch 7: Load judges
-    setJudges(getJudges(id));
-    buildLeaderboard(assignments, h.aiWeight ?? 50);
-  }, [id]);
-
-  const buildLeaderboard = (assignments: JudgeAssignment[], weight: number) => {
+  function buildLeaderboard(assignments: JudgeAssignment[], weight: number) {
     const teamScores: Record<string, any> = {};
     assignments.forEach((a) => {
       if (!teamScores[a.teamName]) {
@@ -182,7 +157,39 @@ export default function HackathonDetail() {
       .sort((a: any, b: any) => b.final - a.final)
       .map((e: any, i: number) => ({ rank: i + 1, ...e }));
     setLeaderboard(entries);
-  };
+  }
+
+  useEffect(() => {
+    if (!id) return;
+
+    const reloadData = () => {
+      const h = getHackathon(id);
+      if (!h) return;
+      setHackathon(h);
+      setName(h.name);
+      setDescription(h.description || h.desc || "");
+      setStartDate(h.startDate);
+      setEndDate(h.endDate);
+      setRounds(h.rounds || []);
+      setMinTeam(h.minTeamSize || "2");
+      setMaxTeam(h.maxTeamSize || "5");
+      setCriteria(h.criteria || []);
+      setAiWeight(h.aiWeight ?? 50);
+
+      setParticipants(getRegistrations(id));
+      setAnnouncements(getNotifications(id));
+      const assignments = getJudgeAssignments(undefined, id);
+      setJudgeAssignments(assignments);
+      setJudges(getJudges(id));
+      buildLeaderboard(assignments, h.aiWeight ?? 50);
+    };
+
+    reloadData();
+
+    // Listen for database sync storage events to update UI in real-time
+    window.addEventListener("storage", reloadData);
+    return () => window.removeEventListener("storage", reloadData);
+  }, [id]);
 
   const saveOverview = () => {
     if (!id) return;
@@ -326,7 +333,13 @@ export default function HackathonDetail() {
   /* ── Patch 9: Face Verification ── */
   const openVerification = async (reg: Registration, memberIdx: number) => {
     setCameraError(""); setCapturedImage(null); setSimilarity(null);
-    setVerifyTarget({ regId: reg.id, memberIdx, storedFace: reg.members[memberIdx]?.faceEncoding || reg.faceImage });
+    const member = reg.members[memberIdx];
+    setVerifyTarget({
+      regId: reg.id,
+      memberIdx,
+      storedFace: member?.faceEncoding || reg.faceImage,
+      email: member?.email || reg.userEmail
+    });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       streamRef.current = stream;
@@ -357,32 +370,81 @@ export default function HackathonDetail() {
     const captured = canvas.toDataURL("image/jpeg", 0.7);
     setCapturedImage(captured);
 
-    if (!verifyTarget.storedFace) {
-      // No stored face → just capture as reference
-      setSimilarity(null);
-      updateMemberVerification(verifyTarget.regId, verifyTarget.memberIdx, true, captured);
-      setParticipants(getRegistrations(id));
-      toast({ title: "Face captured and marked verified (no reference image)" });
-      closeVerification();
-      setVerifying(false);
-      return;
-    }
+    try {
+      // Convert captured base64 image to Blob
+      const blob = await (await fetch(captured)).blob();
+      const file = new File([blob], "verify.jpg", { type: "image/jpeg" });
 
-    const sim = await compareImages(verifyTarget.storedFace, captured);
-    setSimilarity(sim);
-    setVerifying(false);
+      const formData = new FormData();
+      formData.append("file", file);
 
-    if (sim >= 70) {
-      updateMemberVerification(verifyTarget.regId, verifyTarget.memberIdx, true, captured);
-      setParticipants(getRegistrations(id));
-      toast({ title: `Verified! Similarity: ${sim}%`, description: "Member marked as verified" });
-      closeVerification();
-    } else {
+      // Call backend face verify endpoint with target email parameter (1-to-1 matching)
+      const targetEmail = verifyTarget.email || "";
+      const emailParam = targetEmail ? `?email=${encodeURIComponent(targetEmail)}` : "";
+      const token = localStorage.getItem("auth_token");
+
+      const res = await fetch(`http://localhost:8000/api/face/verify${emailParam}`, {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Verification request failed.");
+      }
+
+      if (data.success && data.verified) {
+        const simPct = Math.round(data.similarity * 100);
+        setSimilarity(simPct);
+        
+        // Mark member as verified in localStorage database
+        updateMemberVerification(verifyTarget.regId, verifyTarget.memberIdx, true, captured);
+        setParticipants(getRegistrations(id));
+        toast({ title: `Verified! Similarity: ${simPct}%`, description: "Member identity successfully verified." });
+        closeVerification();
+      } else {
+        const simPct = Math.round((data.similarity || 0) * 100);
+        setSimilarity(simPct);
+        toast({
+          title: "Verification Failed",
+          description: data.message || `Face mismatch (Similarity: ${simPct}%).`,
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      // Fallback to grayscale client-side comparison if server fails/unreachable
       toast({
-        title: `Low similarity: ${sim}%`,
-        description: "Below 70% threshold. Try again with better lighting.",
+        title: "Server Verification Offline",
+        description: "Using local fallback pixel comparison.",
         variant: "destructive",
       });
+
+      if (!verifyTarget.storedFace) {
+        updateMemberVerification(verifyTarget.regId, verifyTarget.memberIdx, true, captured);
+        setParticipants(getRegistrations(id));
+        toast({ title: "Face captured and marked verified (no reference image)" });
+        closeVerification();
+      } else {
+        const sim = await compareImages(verifyTarget.storedFace, captured);
+        setSimilarity(sim);
+        if (sim >= 70) {
+          updateMemberVerification(verifyTarget.regId, verifyTarget.memberIdx, true, captured);
+          setParticipants(getRegistrations(id));
+          toast({ title: `Verified! Similarity: ${sim}%`, description: "Member marked as verified." });
+          closeVerification();
+        } else {
+          toast({
+            title: `Verification Failed (Local): ${sim}%`,
+            description: "Below 70% threshold. Try again with better lighting.",
+            variant: "destructive",
+          });
+        }
+      }
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -674,20 +736,28 @@ export default function HackathonDetail() {
                         </div>
                         <div className="flex items-center gap-2">
                           {participants.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {participants.slice(0, 3).map((p) => {
+                            <select
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const matched = participants.find((p) => p.id === val);
+                                if (matched) {
+                                  handleAssignTeam(j, matched);
+                                }
+                                e.target.value = "";
+                              }}
+                              className="rounded-lg border border-border bg-secondary/50 px-2 py-1 text-xs focus:border-primary focus:outline-none max-w-[180px]"
+                            >
+                              <option value="">Assign Team...</option>
+                              {participants.map((p) => {
                                 const assigned = judgeAssignments.some((a) => a.teamId === p.id && a.judgeEmail === j.email);
                                 return (
-                                  <Button key={p.id} size="sm" variant={assigned ? "secondary" : "outline"} disabled={assigned}
-                                    className="h-7 text-xs" onClick={() => handleAssignTeam(j, p)}>
-                                    {p.teamName} {assigned && "✓"}
-                                  </Button>
+                                  <option key={p.id} value={p.id} disabled={assigned}>
+                                    {p.teamName} {assigned ? "(Assigned)" : ""}
+                                  </option>
                                 );
                               })}
-                              {participants.length > 3 && (
-                                <span className="text-xs text-muted-foreground self-center">+{participants.length - 3} more</span>
-                              )}
-                            </div>
+                            </select>
                           )}
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveJudge(j.id)}>
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />

@@ -59,6 +59,52 @@ const SourceBadge = ({ source }: { source: string }) => {
   );
 };
 
+/* ── Markdown Formatter Helper ── */
+function parseInlineFormatting(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const boldText = part.slice(2, -2);
+      return <strong key={index} className="font-semibold text-primary">{boldText}</strong>;
+    }
+    return part;
+  });
+}
+
+function renderFormattedMessage(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, idx) => {
+    const bulletMatch = line.match(/^(\s*)[*\-]\s+(.*)$/);
+    if (bulletMatch) {
+      const content = bulletMatch[2];
+      return (
+        <ul key={idx} className="list-disc pl-4 space-y-0.5 text-xs text-muted-foreground my-0.5">
+          <li>{parseInlineFormatting(content)}</li>
+        </ul>
+      );
+    }
+
+    const numMatch = line.match(/^(\s*)\d+\.\s+(.*)$/);
+    if (numMatch) {
+      const content = numMatch[2];
+      return (
+        <ol key={idx} className="list-decimal pl-4 space-y-0.5 text-xs text-muted-foreground my-0.5">
+          <li>{parseInlineFormatting(content)}</li>
+        </ol>
+      );
+    }
+
+    if (line.trim() === "") {
+      return <div key={idx} className="h-1.5" />;
+    }
+    return (
+      <p key={idx} className="leading-relaxed font-sans text-xs my-0.5 text-foreground">
+        {parseInlineFormatting(line)}
+      </p>
+    );
+  });
+}
+
 export default function JudgeDashboard() {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<JudgeAssignment[]>([]);
@@ -81,15 +127,24 @@ export default function JudgeDashboard() {
 
   useEffect(() => {
     if (!user?.email) return;
-    const loaded = getJudgeAssignments(user.email);
-    setAssignments(loaded);
 
-    const cached: Record<string, ProjectSnapshot> = {};
-    loaded.forEach((a) => {
-      const snap = getProjectSnapshot(a.teamId, a.hackathonId);
-      if (snap) cached[a.teamId] = snap;
-    });
-    setSnapshots(cached);
+    const reloadData = () => {
+      const loaded = getJudgeAssignments(user.email!);
+      setAssignments(loaded);
+
+      const cached: Record<string, ProjectSnapshot> = {};
+      loaded.forEach((a) => {
+        const snap = getProjectSnapshot(a.teamId, a.hackathonId);
+        if (snap) cached[a.teamId] = snap;
+      });
+      setSnapshots(cached);
+    };
+
+    reloadData();
+
+    // Listen for database sync storage events to update UI in real-time
+    window.addEventListener("storage", reloadData);
+    return () => window.removeEventListener("storage", reloadData);
   }, [user]);
 
   const handleSubmitScore = (teamId: string) => {
@@ -465,9 +520,37 @@ export default function JudgeDashboard() {
                                 <span key={i} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">{t}</span>
                               ))}
                             </div>
-                            <ul className="text-xs space-y-1 text-muted-foreground list-disc pl-4">
-                              {snap.keyFeatures.map((f, i) => <li key={i}>{f}</li>)}
-                            </ul>
+                            {snap.features && snap.features.length > 0 ? (
+                              <div className="space-y-2 pt-2 border-t border-border/30">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Features & Working Status</p>
+                                <div className="grid gap-2">
+                                  {snap.features.map((feat, idx) => {
+                                    let badgeClass = "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
+                                    if (feat.status === "Working") badgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                    else if (feat.status === "Partially Implemented") badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                                    else if (feat.status === "Mocked/Planned") badgeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+
+                                    return (
+                                      <div key={idx} className="flex flex-col gap-1 rounded-lg bg-secondary/20 p-2.5 border border-border/20">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="font-semibold text-xs text-foreground">{feat.name}</span>
+                                          <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase ${badgeClass}`}>
+                                            {feat.status}
+                                          </span>
+                                        </div>
+                                        {feat.details && (
+                                          <p className="text-[11px] text-muted-foreground leading-normal">{feat.details}</p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <ul className="text-xs space-y-1 text-muted-foreground list-disc pl-4">
+                                {snap.keyFeatures.map((f, i) => <li key={i}>{f}</li>)}
+                              </ul>
+                            )}
                             <p className="text-[10px] text-muted-foreground">Cached: {new Date(snap.cachedAt).toLocaleString()}</p>
                           </>
                         ) : (
@@ -484,9 +567,8 @@ export default function JudgeDashboard() {
               )}
             </TabsContent>
 
-            {/* ── QUESTIONS ── */}
             <TabsContent value="questions">
-              <div className="glass-card flex flex-col" style={{ height: "calc(100vh - 280px)", minHeight: 440 }}>
+              <div className="glass-card flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: 680 }}>
                 <div className="border-b border-border/50 px-6 py-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Bot className="h-5 w-5 text-primary" />
@@ -529,7 +611,7 @@ export default function JudgeDashboard() {
                   {chatMessages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === "assistant" ? "justify-start" : "justify-end"}`}>
                       <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${m.role === "assistant" ? "bg-secondary" : "bg-primary/10"}`}>
-                        <p className="whitespace-pre-wrap">{m.content}</p>
+                        <div className="space-y-1">{renderFormattedMessage(m.content)}</div>
                       </div>
                     </div>
                   ))}

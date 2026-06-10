@@ -93,6 +93,20 @@ export default function StudentDashboard() {
     setAvailableHackathons(all.filter((h) => !joinedIds.has(h.id)));
   }, [user]);
 
+  // Listen for database sync storage events to update UI in real-time
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      if (!user?.email) return;
+      const regs = getUserRegistrations(user.email);
+      setMyRegistrations(regs);
+      const all = getHackathons();
+      const joinedIds = new Set(regs.map((r) => r.hackathonId));
+      setAvailableHackathons(all.filter((h) => !joinedIds.has(h.id)));
+    };
+    window.addEventListener("storage", handleStorageUpdate);
+    return () => window.removeEventListener("storage", handleStorageUpdate);
+  }, [user]);
+
   // When active hackathon changes, load its context
   useEffect(() => {
     if (!activeHackathonId || !user?.email) return;

@@ -6,6 +6,33 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
+import { useEffect } from "react";
+
+// ── Intercept localStorage globally for real-time cross-browser synchronization ──
+const originalSetItem = localStorage.setItem;
+const originalRemoveItem = localStorage.removeItem;
+
+localStorage.setItem = function (key, value) {
+  originalSetItem.apply(this, arguments as any);
+  if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
+    fetch("http://localhost:8000/api/auth/sync/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: value }),
+    }).catch(() => {});
+  }
+};
+
+localStorage.removeItem = function (key) {
+  originalRemoveItem.apply(this, arguments as any);
+  if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
+    fetch("http://localhost:8000/api/auth/sync/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: null }),
+    }).catch(() => {});
+  }
+};
 
 
 // ── Page imports ──
@@ -39,9 +66,36 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+const App = () => {
+  useEffect(() => {
+    const syncState = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/auth/sync/");
+        if (res.ok) {
+          const data = await res.json();
+          Object.entries(data).forEach(([key, value]) => {
+            if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
+              if (localStorage.getItem(key) !== value) {
+                originalSetItem.call(localStorage, key, value as string);
+                window.dispatchEvent(new Event("storage"));
+              }
+            }
+          });
+        }
+      } catch {
+        // Silent fail if backend is restarting
+      }
+    };
+    syncState();
+
+    // Poll backend every 3 seconds to keep different browsers in sync
+    const iv = setInterval(syncState, 3000);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
       <AuthProvider>
         <BrowserRouter>
           <ErrorBoundary>
@@ -188,6 +242,7 @@ const App = () => (
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
