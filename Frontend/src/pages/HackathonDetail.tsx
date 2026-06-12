@@ -275,7 +275,8 @@ export default function HackathonDetail() {
 
     // Fix 3: Auto-register judge in Django so they can log in
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/auth/signup/", {
+      const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
+      const res = await fetch(`${BASE_URL}/api/auth/signup/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

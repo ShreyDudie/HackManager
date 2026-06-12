@@ -118,7 +118,8 @@ export default function PPTUpload() {
           const formData = new FormData();
           formData.append("file", file);
 
-          const response = await fetch("http://localhost:8000/api/auth/pdf-upload/", {
+          const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
+          const response = await fetch(`${BASE_URL}/api/auth/pdf-upload/`, {
             method: "POST",
             body: formData,
             // Header for Content-Type is set automatically by fetch for FormData

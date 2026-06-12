@@ -25,7 +25,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const API = "http://127.0.0.1:8000/api/auth";
+const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
+const API = `${BASE_URL}/api/auth`;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
