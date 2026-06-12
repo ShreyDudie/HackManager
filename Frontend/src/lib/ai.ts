@@ -272,14 +272,7 @@ export async function extractPDFContent(source: { base64?: string | null; url?: 
             const res = await fetch(source.url);
             if (!res.ok) return null;
             const buf = await res.arrayBuffer();
-            const bytes = new Uint8Array(buf);
-            const CHUNK_SIZE = 8192;
-            const parts: string[] = [];
-            for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-                const chunk = bytes.subarray(i, i + CHUNK_SIZE);
-                parts.push(String.fromCharCode.apply(null, chunk as any));
-            }
-            binary = parts.join("");
+            binary = new TextDecoder("latin1").decode(new Uint8Array(buf));
         } else if (source.base64) {
             const raw = source.base64.includes(",") ? source.base64.split(",")[1] : source.base64;
             binary = atob(raw);
