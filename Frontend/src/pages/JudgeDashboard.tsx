@@ -22,6 +22,7 @@ import {
   getAiCache,
   setAiCache,
   getAllPPTSubmissions,
+  getRegistrations,
   type JudgeAssignment,
   type ProjectSnapshot,
   type AiEvaluation,
@@ -215,7 +216,11 @@ export default function JudgeDashboard() {
       // Feature 5: Extract PDF text if available (Async with URL support)
       let pdfText: string | null = null;
       const ppts = getAllPPTSubmissions(assignment.hackathonId);
-      const matchedPpt = ppts.find((p) => p.userEmail === assignment.teamId || p.userEmail === (assignment as any).studentEmail);
+      const reg = getRegistrations().find(r => r.id === assignment.teamId);
+      const emails = reg 
+        ? [reg.userEmail, ...(reg.members || []).map(m => m.email)].filter(Boolean)
+        : [assignment.teamId];
+      const matchedPpt = ppts.find((p) => emails.includes(p.userEmail));
 
       if (matchedPpt) {
         if (matchedPpt.pdfUrl || matchedPpt.pdfBase64) {
@@ -412,7 +417,11 @@ export default function JudgeDashboard() {
                                 )}
                                 {(() => {
                                   const ppts = getAllPPTSubmissions(a.hackathonId);
-                                  const matched = ppts.find(p => p.userEmail === a.teamId || p.userEmail === (a as any).studentEmail);
+                                  const reg = getRegistrations().find(r => r.id === a.teamId);
+                                  const emails = reg 
+                                    ? [reg.userEmail, ...(reg.members || []).map(m => m.email)].filter(Boolean)
+                                    : [a.teamId];
+                                  const matched = ppts.find(p => emails.includes(p.userEmail));
                                   if (matched) {
                                     return (
                                       <button onClick={() => {
