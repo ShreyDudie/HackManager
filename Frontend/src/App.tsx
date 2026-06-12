@@ -70,7 +70,7 @@ const App = () => {
   useEffect(() => {
     const syncState = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/auth/sync/");
+        const res = await fetch(`http://localhost:8000/api/auth/sync/?_t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           Object.entries(data).forEach(([key, value]) => {

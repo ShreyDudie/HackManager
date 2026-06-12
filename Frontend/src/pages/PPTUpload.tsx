@@ -55,25 +55,37 @@ export default function PPTUpload() {
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
   const [uploadMode, setUploadMode] = useState<"pdf" | "link">("pdf");
 
-  // Load data
+  // Load data and listen to sync storage updates
   useEffect(() => {
-    if (!user?.email) return;
-    const regs = getUserRegistrations(user.email);
-    setRegistrations(regs);
-    const saved = localStorage.getItem("sq_active_hackathon_" + user.email);
-    const activeId = saved && regs.find((r: any) => r.hackathonId === saved) ? saved : regs[0]?.hackathonId || "";
-    setActiveHackathonId(activeId);
+    const loadRegs = () => {
+      if (!user?.email) return;
+      const regs = getUserRegistrations(user.email);
+      setRegistrations(regs);
+      const saved = localStorage.getItem("sq_active_hackathon_" + user.email);
+      const activeId = saved && regs.find((r: any) => r.hackathonId === saved) ? saved : regs[0]?.hackathonId || "";
+      setActiveHackathonId(activeId);
+    };
+
+    loadRegs();
+    window.addEventListener("storage", loadRegs);
+    return () => window.removeEventListener("storage", loadRegs);
   }, [user]);
 
   useEffect(() => {
-    if (!user?.email || !activeHackathonId) return;
-    const hackathon = getHackathon(activeHackathonId);
-    if (hackathon?.rounds?.length) {
-      setRounds(hackathon.rounds);
-    } else {
-      setRounds([{ id: "default", name: "Submission", description: "Submit your presentation", deadline: "", submissionType: "PPT", shortlist: false }]);
-    }
-    setSubmissions(getPPTSubmissions(user.email, activeHackathonId));
+    const loadSubmissions = () => {
+      if (!user?.email || !activeHackathonId) return;
+      const hackathon = getHackathon(activeHackathonId);
+      if (hackathon?.rounds?.length) {
+        setRounds(hackathon.rounds);
+      } else {
+        setRounds([{ id: "default", name: "Submission", description: "Submit your presentation", deadline: "", submissionType: "PPT", shortlist: false }]);
+      }
+      setSubmissions(getPPTSubmissions(user.email, activeHackathonId));
+    };
+
+    loadSubmissions();
+    window.addEventListener("storage", loadSubmissions);
+    return () => window.removeEventListener("storage", loadSubmissions);
   }, [user, activeHackathonId]);
 
   // Handle PDF file selection

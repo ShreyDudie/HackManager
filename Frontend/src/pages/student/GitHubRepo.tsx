@@ -38,19 +38,29 @@ export default function GitHubRepo() {
     const [savedUrl, setSavedUrl] = useState("");
     const [hackathonId, setHackathonId] = useState("");
 
-    // Load existing submission on mount
+    // Load existing submission on mount and on storage sync
     useEffect(() => {
-        if (!user?.email) return;
-        const reg = findUserRegistration(user.email);
-        if (reg) {
-            setHackathonId(reg.hackathonId);
-            const existing = getGitHubSubmission(user.email, reg.hackathonId);
-            if (existing) {
-                setSavedUrl(existing.url);
-                setUrl(existing.url);
-                setSubmitted(true);
+        const loadData = () => {
+            if (!user?.email) return;
+            const reg = findUserRegistration(user.email);
+            if (reg) {
+                setHackathonId(reg.hackathonId);
+                const existing = getGitHubSubmission(user.email, reg.hackathonId);
+                if (existing) {
+                    setSavedUrl(existing.url);
+                    setUrl(existing.url);
+                    setSubmitted(true);
+                } else {
+                    setSavedUrl("");
+                    setUrl("");
+                    setSubmitted(false);
+                }
             }
-        }
+        };
+
+        loadData();
+        window.addEventListener("storage", loadData);
+        return () => window.removeEventListener("storage", loadData);
     }, [user]);
 
     // Handle submission
