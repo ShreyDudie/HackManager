@@ -2,8 +2,7 @@ import os
 import cv2
 import numpy as np
 import json
-# import mediapipe as mp
-from mediapipe.python.solutions import face_mesh
+import mediapipe as mp
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,8 +14,8 @@ os.makedirs(REGISTER_DIR, exist_ok=True)
 os.makedirs(EMBEDDING_DIR, exist_ok=True)
 
 # MediaPipe Initialization
-# mp_face_mesh = mp.solutions.face_mesh
-face_mesh_detector = face_mesh.FaceMesh(
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(
     static_image_mode=True,
     max_num_faces=2,
     refine_landmarks=True,
@@ -38,7 +37,7 @@ STABLE_INDICES = [
 ]
 
 def get_normalized_embedding(img_rgb):
-    results = face_mesh_detector.process(img_rgb)
+    results = face_mesh.process(img_rgb)
     if not results.multi_face_landmarks:
         return None, "No face detected"
     if len(results.multi_face_landmarks) > 1:
