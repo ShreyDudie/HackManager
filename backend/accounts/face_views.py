@@ -13,15 +13,6 @@ EMBEDDING_DIR = "face_embeddings"
 os.makedirs(REGISTER_DIR, exist_ok=True)
 os.makedirs(EMBEDDING_DIR, exist_ok=True)
 
-# MediaPipe Initialization
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(
-    static_image_mode=True,
-    max_num_faces=2,
-    refine_landmarks=True,
-    min_detection_confidence=0.5
-)
-
 # Stable Landmark Indices (Subset for embedding)
 # Eyes, Nose Bridge, Jaw, Mouth
 STABLE_INDICES = [
@@ -36,14 +27,74 @@ STABLE_INDICES = [
     10, 338, 297, 332, 284, 251, 389, 356, 454, 152, 234, 127, 162, 21, 54, 103, 67, 109
 ]
 
-def get_normalized_embedding(img_rgb):
-    results = face_mesh.process(img_rgb)
-    if not results.multi_face_landmarks:
-        return None, "No face detected"
-    if len(results.multi_face_landmarks) > 1:
-        return None, "Multiple faces detected"
+# MediaPipe Face Landmarker or FaceMesh initialization (Lazy Loaded)
+_landmarker = None
+_legacy_face_mesh = None
 
-    landmarks = results.multi_face_landmarks[0].landmark
+def get_landmarker_or_mesh():
+    global _landmarker, _legacy_face_mesh
+    # Try legacy solutions first
+    try:
+        import mediapipe as mp
+        if hasattr(mp, 'solutions') and hasattr(mp.solutions, 'face_mesh'):
+            if _legacy_face_mesh is None:
+                _legacy_face_mesh = mp.solutions.face_mesh.FaceMesh(
+                    static_image_mode=True,
+                    max_num_faces=2,
+                    refine_landmarks=True,
+                    min_detection_confidence=0.5
+                )
+            return "legacy", _legacy_face_mesh
+    except Exception:
+        pass
+
+    # Try Tasks API fallback (useful on Python 3.13+)
+    try:
+        from mediapipe.tasks.python import vision
+        from mediapipe.tasks.python import BaseOptions
+        if _landmarker is None:
+            model_path = os.path.join(os.path.dirname(__file__), "face_landmarker.task")
+            if not os.path.exists(model_path):
+                # Download model file from Google storage
+                url = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+                import urllib.request
+                urllib.request.urlretrieve(url, model_path)
+            
+            options = vision.FaceLandmarkerOptions(
+                base_options=BaseOptions(model_asset_path=model_path),
+                num_faces=2
+            )
+            _landmarker = vision.FaceLandmarker.create_from_options(options)
+        return "tasks", _landmarker
+    except Exception as e:
+        # Both failed or missing dependencies
+        return "none", None
+
+
+def get_normalized_embedding(img_rgb):
+    api_type, detector = get_landmarker_or_mesh()
+    if detector is None:
+        return None, "Face mesh/landmarker is not initialized or supported"
+
+    if api_type == "legacy":
+        results = detector.process(img_rgb)
+        if not results.multi_face_landmarks:
+            return None, "No face detected"
+        if len(results.multi_face_landmarks) > 1:
+            return None, "Multiple faces detected"
+        landmarks = results.multi_face_landmarks[0].landmark
+    elif api_type == "tasks":
+        import mediapipe as mp
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_rgb)
+        results = detector.detect(mp_image)
+        if not results.face_landmarks:
+            return None, "No face detected"
+        if len(results.face_landmarks) > 1:
+            return None, "Multiple faces detected"
+        landmarks = results.face_landmarks[0]
+    else:
+        return None, "Unsupported detector API type"
+
     h, w, _ = img_rgb.shape
 
     # Quality Check: Face bounding box size
