@@ -1,50 +1,27 @@
-# import os
-# import cv2
-# import numpy as np
-# import json
-# import mediapipe as mp
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework import status
-# from rest_framework.permissions import IsAuthenticated
-
-# REGISTER_DIR = "registered_faces"
-# EMBEDDING_DIR = "face_embeddings"
-# os.makedirs(REGISTER_DIR, exist_ok=True)
-# os.makedirs(EMBEDDING_DIR, exist_ok=True)
-
-# # MediaPipe Initialization
-# mp_face_mesh = mp.solutions.face_mesh
-# face_mesh = mp_face_mesh.FaceMesh(
-#     static_image_mode=True,
-#     max_num_faces=2,
-#     refine_landmarks=True,
-#     min_detection_confidence=0.5
-# )
-
-
 import os
 import cv2
 import numpy as np
 import json
-import mediapipe as mp
-
-print("========== MEDIAPIPE DEBUG ==========")
-print("MP:", mp)
-print("MP FILE:", getattr(mp, "__file__", "NO_FILE"))
-print("MP VERSION:", getattr(mp, "__version__", "NO_VERSION"))
-print("HAS SOLUTIONS:", hasattr(mp, "solutions"))
-print("DIR:", dir(mp))
-print("====================================")
-
+# import mediapipe as mp
+from mediapipe.python.solutions import face_mesh
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-mp_face_mesh = None
-face_mesh = None
+REGISTER_DIR = "registered_faces"
+EMBEDDING_DIR = "face_embeddings"
+os.makedirs(REGISTER_DIR, exist_ok=True)
+os.makedirs(EMBEDDING_DIR, exist_ok=True)
 
+# MediaPipe Initialization
+# mp_face_mesh = mp.solutions.face_mesh
+face_mesh_detector = face_mesh.FaceMesh(
+    static_image_mode=True,
+    max_num_faces=2,
+    refine_landmarks=True,
+    min_detection_confidence=0.5
+)
 
 # Stable Landmark Indices (Subset for embedding)
 # Eyes, Nose Bridge, Jaw, Mouth
@@ -61,7 +38,7 @@ STABLE_INDICES = [
 ]
 
 def get_normalized_embedding(img_rgb):
-    results = face_mesh.process(img_rgb)
+    results = face_mesh_detector.process(img_rgb)
     if not results.multi_face_landmarks:
         return None, "No face detected"
     if len(results.multi_face_landmarks) > 1:
