@@ -302,7 +302,8 @@ export default function AdminQRMonitor() {
             const emailParam = `?email=${encodeURIComponent(faceVerifyEmail)}`;
             const token = localStorage.getItem("auth_token");
 
-            const res = await fetch(`http://localhost:8000/api/face/verify${emailParam}`, {
+            const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
+            const res = await fetch(`${BASE_URL}/api/face/verify${emailParam}`, {
                 method: "POST",
                 headers: {
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),

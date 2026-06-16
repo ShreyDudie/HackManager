@@ -12,10 +12,13 @@ import { useEffect } from "react";
 const originalSetItem = localStorage.setItem;
 const originalRemoveItem = localStorage.removeItem;
 
+const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
+const SYNC_URL = `${BASE_URL}/api/auth/sync/`;
+
 localStorage.setItem = function (key, value) {
   originalSetItem.apply(this, arguments as any);
   if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
-    fetch("http://localhost:8000/api/auth/sync/", {
+    fetch(SYNC_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [key]: value }),
@@ -26,7 +29,7 @@ localStorage.setItem = function (key, value) {
 localStorage.removeItem = function (key) {
   originalRemoveItem.apply(this, arguments as any);
   if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
-    fetch("http://localhost:8000/api/auth/sync/", {
+    fetch(SYNC_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [key]: null }),
@@ -70,7 +73,7 @@ const App = () => {
   useEffect(() => {
     const syncState = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/auth/sync/?_t=${Date.now()}`);
+        const res = await fetch(`${SYNC_URL}?_t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           Object.entries(data).forEach(([key, value]) => {

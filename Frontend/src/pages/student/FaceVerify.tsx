@@ -123,7 +123,8 @@ export default function FaceVerify() {
                 formData.append("file", file);
 
                 const token = localStorage.getItem("auth_token");
-                const res = await fetch("http://localhost:8000/api/face/register", {
+                const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
+                const res = await fetch(`${BASE_URL}/api/face/register`, {
                     method: "POST",
                     headers: {
                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
