@@ -28,7 +28,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-u^ll^z9lour73s!_o6#)0
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 't')
 
 import os
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,hackmanager-2.onrender.com").split(",")
+raw_hosts = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,hackmanager-2.onrender.com,*.onrender.com")
+ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
+if "hackmanager-2.onrender.com" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("hackmanager-2.onrender.com")
+if DEBUG:
+    ALLOWED_HOSTS.append("*")
 
 
 # Application definition
