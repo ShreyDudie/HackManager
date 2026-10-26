@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/services/apiClient";
 import {
   getHackathon,
   updateHackathon,
@@ -52,13 +53,8 @@ import {
   type Judge,
   type TeamMember,
   type Ticket,
-} from "@/lib/storage";
-
-const sidebarItems = [
-  { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-  { to: "/admin/qr-monitor", label: "QR Monitor", icon: QrCode },
-  { to: "/helpline", label: "Helpline", icon: HelpCircle },
-];
+} from "@/lib/hackathonStore";
+import { verifyFace } from "@/services/faceApi";
 
 /* ── Face Pixel Similarity (simple grayscale diff) ── */
 async function compareImages(base64A: string, base64B: string): Promise<number> {
@@ -275,8 +271,7 @@ export default function HackathonDetail() {
 
     // Fix 3: Auto-register judge in Django so they can log in
     try {
-      const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-      const res = await fetch(`${BASE_URL}/api/auth/signup/`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/signup/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -372,34 +367,14 @@ export default function HackathonDetail() {
     setCapturedImage(captured);
 
     try {
-      // Convert captured base64 image to Blob
-      const blob = await (await fetch(captured)).blob();
-      const file = new File([blob], "verify.jpg", { type: "image/jpeg" });
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      // Call backend face verify endpoint with target email parameter (1-to-1 matching)
       const targetEmail = verifyTarget.email || "";
-      const emailParam = targetEmail ? `?email=${encodeURIComponent(targetEmail)}` : "";
-      const token = localStorage.getItem("auth_token");
-
-      const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-      const res = await fetch(`${BASE_URL}/api/face/verify${emailParam}`, {
-        method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
+      const { response, data } = await verifyFace(captured, targetEmail);
+      if (!response.ok) {
         throw new Error(data.message || "Verification request failed.");
       }
 
       if (data.success && data.verified) {
-        const simPct = Math.round(data.similarity * 100);
+        const simPct = Math.round((data.similarity ?? 0) * 100);
         setSimilarity(simPct);
         
         // Mark member as verified in localStorage database
@@ -465,7 +440,7 @@ export default function HackathonDetail() {
   if (!hackathon) {
     return (
       <div className="flex min-h-screen pt-16">
-        <DashboardSidebar items={sidebarItems} title="Admin" />
+        <DashboardSidebar title="Admin" />
         <main className="flex-1 p-6">
           <p className="text-muted-foreground">Hackathon not found. <Link to="/admin" className="text-primary hover:underline">← Back</Link></p>
         </main>
@@ -475,7 +450,7 @@ export default function HackathonDetail() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={sidebarItems} title="Admin" />
+      <DashboardSidebar title="Admin" />
       <main className="flex-1 p-6 md:p-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Link to="/admin" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">

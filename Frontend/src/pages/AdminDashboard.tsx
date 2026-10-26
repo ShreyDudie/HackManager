@@ -21,14 +21,8 @@ import {
   getQRStats,
   getQRScanLogs,
   type Hackathon,
-} from "@/lib/storage";
+} from "@/lib/hackathonStore";
 import { toast } from "@/hooks/use-toast";
-
-const sidebarItems = [
-  { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-  { to: "/admin/qr-monitor", label: "QR Monitor", icon: QrCode },
-  { to: "/helpline", label: "Helpline", icon: HelpCircle },
-];
 
 const statusColors: Record<string, string> = {
   Open: "bg-success/10 text-success",
@@ -112,7 +106,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={sidebarItems} title="Admin" />
+      <DashboardSidebar title="Admin" />
       <main className="flex-1 p-6 md:p-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <div className="mb-6 flex items-center justify-between">

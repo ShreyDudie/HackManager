@@ -26,7 +26,7 @@ import {
   type JudgeAssignment,
   type ProjectSnapshot,
   type AiEvaluation,
-} from "@/lib/storage";
+} from "@/lib/hackathonStore";
 import {
   evaluatePPT,
   chatWithRepo,
@@ -36,10 +36,6 @@ import {
   isAIAvailable,
   type ContentFetchResult,
 } from "@/lib/ai";
-
-const sidebarItems = [
-  { to: "/judge", label: "Overview", icon: LayoutDashboard },
-];
 
 /* ── Content source badge ── */
 const SourceBadge = ({ source }: { source: string }) => {
@@ -358,7 +354,7 @@ export default function JudgeDashboard() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={sidebarItems} title="Judge" />
+      <DashboardSidebar title="Judge" />
       <main className="flex-1 p-6 md:p-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <h1 className="mb-1 font-display text-2xl font-bold">Judge Panel</h1>

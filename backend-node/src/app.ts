@@ -1,0 +1,25 @@
+import cors from "cors";
+import express from "express";
+import { env } from "./config/env";
+import { errorHandler } from "./middleware/errors";
+import { authRouter } from "./modules/auth/routes";
+import { checkinRedemptionRouter, checkinRouter } from "./modules/checkins/routes";
+import { faceRouter } from "./modules/face/routes";
+import { hackathonRouter } from "./modules/hackathons/routes";
+import { mediaRouter, uploadRouter } from "./modules/media/routes";
+import { submissionRouter } from "./modules/submissions/routes";
+
+export const app = express();
+app.disable("x-powered-by");
+app.use(cors({ origin: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()), methods: ["GET", "POST", "PUT", "PATCH", "DELETE"], allowedHeaders: ["Authorization", "Content-Type"] }));
+app.use(express.json({ limit: "1mb" }));
+app.get("/health", (_request, response) => response.json({ status: "ok" }));
+app.use("/api/auth", authRouter);
+app.use("/api", uploadRouter);
+app.use(mediaRouter);
+app.use("/api/face", faceRouter);
+app.use("/api/hackathons", hackathonRouter);
+app.use("/api/hackathons", submissionRouter);
+app.use("/api/hackathons", checkinRouter);
+app.use("/api/check-ins", checkinRedemptionRouter);
+app.use(errorHandler);

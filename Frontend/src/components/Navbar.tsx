@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Zap, LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import LandingNavbar from "@/components/landing/LandingNavbar";
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -23,6 +24,10 @@ export default function Navbar() {
     : null;
 
   const isActive = (path: string) => location.pathname === path;
+
+  if (location.pathname === "/") {
+    return <LandingNavbar dashboardLink={dashboardLink} onLogout={logout} />;
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -67,7 +72,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
+        <button aria-label={mobileOpen ? "Close menu" : "Open menu"} aria-expanded={mobileOpen} className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>

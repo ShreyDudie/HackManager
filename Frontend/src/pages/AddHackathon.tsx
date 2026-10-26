@@ -14,13 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { createHackathon, type Hackathon } from "@/lib/storage";
-
-const sidebarItems = [
-  { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-  { to: "/admin/qr-monitor", label: "QR Monitor", icon: QrCode },
-  { to: "/helpline", label: "Helpline", icon: HelpCircle },
-];
+import { createHackathon, type Hackathon } from "@/lib/hackathonStore";
 
 interface FormState {
   name: string;
@@ -135,7 +129,7 @@ export default function AddHackathon() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={sidebarItems} title="Admin" />
+      <DashboardSidebar title="Admin" />
       <main className="flex-1 p-6 md:p-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto max-w-2xl">
           <Link to="/admin" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">

@@ -27,25 +27,8 @@ import {
   getHackathons,
   type Ticket,
   type Hackathon,
-} from "@/lib/storage";
+} from "@/lib/hackathonStore";
 import { helplineChat, isAIAvailable } from "@/lib/ai";
-
-const studentSidebar = [
-  { to: "/student", label: "Overview", icon: LayoutDashboard },
-  { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-  { to: "/student/github", label: "GitHub Repo", icon: Github },
-  { to: "/student/qr", label: "My QR Code", icon: QrCode },
-  { to: "/student/notifications", label: "Notifications", icon: Bell },
-  { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-  { to: "/helpline", label: "Helpline", icon: HelpCircle },
-];
-
-const adminSidebar = [
-  { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-  { to: "/admin/leaderboard", label: "Leaderboard", icon: Trophy },
-  { to: "/admin/announcements", label: "Announcements", icon: Bell },
-  { to: "/helpline", label: "Helpline", icon: HelpCircle },
-];
 
 const statusColors: Record<string, string> = {
   Open: "bg-warning/10 text-warning",
@@ -197,7 +180,7 @@ export default function Helpline() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={isAdmin ? adminSidebar : studentSidebar} title={isAdmin ? "Admin" : "Student"} />
+      <DashboardSidebar title={isAdmin ? "Admin" : "Student"} />
       <main className="flex-1 p-6 md:p-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <div className="mb-6 flex items-center justify-between">

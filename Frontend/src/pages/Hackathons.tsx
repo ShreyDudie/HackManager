@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Calendar, Users, ArrowRight, Search, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getHackathons, getRegistrations, getExternalHackathons, type Hackathon, type ExternalHackathon } from "@/lib/storage";
+import { getHackathons, getRegistrations, getExternalHackathons, type Hackathon, type ExternalHackathon } from "@/lib/hackathonStore";
 
 export default function Hackathons() {
   const [search, setSearch] = useState("");

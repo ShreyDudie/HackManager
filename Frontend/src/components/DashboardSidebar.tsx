@@ -1,21 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Zap, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { dashboardNavigation, type DashboardRole } from "@/config/navigation";
+import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
 
 interface Props {
-  items: NavItem[];
-  title: string;
+  title: DashboardRole;
 }
 
-export default function DashboardSidebar({ items, title }: Props) {
+export default function DashboardSidebar({ title }: Props) {
   const { logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -31,6 +24,7 @@ export default function DashboardSidebar({ items, title }: Props) {
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="rounded-md p-1 text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -38,7 +32,7 @@ export default function DashboardSidebar({ items, title }: Props) {
       </div>
 
       <nav className="flex-1 space-y-1 px-2 py-3">
-        {items.map((item) => {
+        {dashboardNavigation[title].map((item) => {
           const active = location.pathname === item.to;
           return (
             <Link

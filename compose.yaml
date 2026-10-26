@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend-node/Dockerfile
+    environment:
+      PORT: 8000
+      DB_FILE_NAME: /data/hackmanager.db
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your environment}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      FACE_SERVICE_URL: http://face-service:8001
+      FACE_SERVICE_KEY: ${FACE_SERVICE_KEY:?set FACE_SERVICE_KEY in your environment}
+      UPLOAD_DIR: ../data/uploads
+      BIOMETRIC_DIR: ../data/biometrics
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    depends_on:
+      face-service:
+        condition: service_healthy
+  face-service:
+    build:
+      context: .
+      dockerfile: services/face-service/Dockerfile
+    environment:
+      FACE_SERVICE_KEY: ${FACE_SERVICE_KEY:?set FACE_SERVICE_KEY in your environment}
+    expose:
+      - "8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5

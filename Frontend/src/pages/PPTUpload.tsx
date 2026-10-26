@@ -21,18 +21,8 @@ import {
   setPPTSubmission,
   type PPTSubmission,
   type Round,
-} from "@/lib/storage";
-
-const sidebarItems = [
-  { to: "/student", label: "Overview", icon: LayoutDashboard },
-  { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-  { to: "/student/github", label: "GitHub Repo", icon: Github },
-  { to: "/student/qr", label: "My QR Code", icon: QrCode },
-  { to: "/student/notifications", label: "Notifications", icon: Bell },
-  { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-  { to: "/student/grievance", label: "Grievance & Support", icon: HelpCircle },
-  { to: "/student/linkedin", label: "LinkedIn Post", icon: Linkedin },
-];
+} from "@/lib/hackathonStore";
+import { uploadPresentationPdf } from "@/services/presentationApi";
 
 const MAX_PDF_SIZE_MB = 10;
 const URL_REGEX = /^https?:\/\/.+\..+/i;
@@ -127,18 +117,7 @@ export default function PPTUpload() {
       try {
         const file = fileInputRef.current?.files?.[0];
         if (file) {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-          const response = await fetch(`${BASE_URL}/api/auth/pdf-upload/`, {
-            method: "POST",
-            body: formData,
-            // Header for Content-Type is set automatically by fetch for FormData
-          });
-
-          if (!response.ok) throw new Error("Upload failed");
-          const data = await response.json();
+          const data = await uploadPresentationPdf(file);
           finalPdfUrl = data.url;
           toast({ title: "File Uploaded", description: "PDF saved to server successfully." });
         }
@@ -202,7 +181,7 @@ export default function PPTUpload() {
   if (registrations.length === 0) {
     return (
       <div className="flex min-h-screen pt-16">
-        <DashboardSidebar items={sidebarItems} title="Student" />
+        <DashboardSidebar title="Student" />
         <main className="flex-1 p-6 flex items-center justify-center">
           <div className="glass-card p-12 text-center text-muted-foreground">
             <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
@@ -215,7 +194,7 @@ export default function PPTUpload() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={sidebarItems} title="Student" />
+      <DashboardSidebar title="Student" />
       <main className="flex-1 p-6 md:p-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <h1 className="mb-1 font-display text-2xl font-bold">PPT Submissions</h1>

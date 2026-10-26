@@ -24,18 +24,7 @@ import {
     sha256,
     type QRToken,
     type QRScanLog,
-} from "@/lib/storage";
-
-const sidebarItems = [
-    { to: "/student", label: "Overview", icon: LayoutDashboard },
-    { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-    { to: "/student/github", label: "GitHub Repo", icon: Github },
-    { to: "/student/qr", label: "My QR Code", icon: QrCode },
-    { to: "/student/notifications", label: "Notifications", icon: Bell },
-    { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-    { to: "/student/grievance", label: "Grievance & Support", icon: HelpCircle },
-    { to: "/student/linkedin", label: "LinkedIn Post", icon: Linkedin },
-];
+} from "@/lib/hackathonStore";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"] as const;
 const MEAL_LABELS: Record<string, string> = {
@@ -179,7 +168,7 @@ export default function MyQR() {
     if (registrations.length === 0) {
         return (
             <div className="flex min-h-screen pt-16">
-                <DashboardSidebar items={sidebarItems} title="Student" />
+                <DashboardSidebar title="Student" />
                 <main className="flex-1 p-6 md:p-8">
                     <div className="glass-card flex flex-col items-center justify-center gap-4 p-12 text-muted-foreground">
                         <QrCode className="h-12 w-12 text-muted-foreground/30" />
@@ -194,7 +183,7 @@ export default function MyQR() {
 
     return (
         <div className="flex min-h-screen pt-16">
-            <DashboardSidebar items={sidebarItems} title="Student" />
+            <DashboardSidebar title="Student" />
             <main className="flex-1 p-6 md:p-8">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h1 className="mb-1 font-display text-2xl font-bold">My QR Codes</h1>

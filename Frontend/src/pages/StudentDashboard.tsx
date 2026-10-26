@@ -26,18 +26,7 @@ import {
   type Registration,
   type Hackathon,
   type TeamMember,
-} from "@/lib/storage";
-
-const sidebarItems = [
-  { to: "/student", label: "Overview", icon: LayoutDashboard },
-  { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-  { to: "/student/github", label: "GitHub Repo", icon: Github },
-  { to: "/student/qr", label: "My QR Code", icon: QrCode },
-  { to: "/student/notifications", label: "Notifications", icon: Bell },
-  { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-  { to: "/student/grievance", label: "Grievance & Support", icon: HelpCircle },
-  { to: "/student/linkedin", label: "LinkedIn Post", icon: Linkedin },
-];
+} from "@/lib/hackathonStore";
 
 const statusColors: Record<string, string> = {
   "In Process": "bg-warning/10 text-warning",
@@ -208,7 +197,7 @@ export default function StudentDashboard() {
   if (myRegistrations.length === 0 && !showJoinForm) {
     return (
       <div className="flex min-h-screen pt-16">
-        <DashboardSidebar items={sidebarItems} title="Student" />
+        <DashboardSidebar title="Student" />
         <main className="flex-1 flex items-center justify-center p-6">
           <div className="glass-card w-full max-w-md p-8 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -232,7 +221,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="flex min-h-screen pt-16">
-      <DashboardSidebar items={sidebarItems} title="Student" />
+      <DashboardSidebar title="Student" />
       <main className="flex-1 p-6 md:p-8">
         <AnimatePresence mode="wait">
           {showJoinForm ? (

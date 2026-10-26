@@ -28,15 +28,10 @@ import {
     type QRScanLog,
     type Hackathon,
     type Registration
-} from "@/lib/storage";
+} from "@/lib/hackathonStore";
 import { toast } from "@/hooks/use-toast";
 import { Html5Qrcode } from "html5-qrcode";
-
-const sidebarItems = [
-    { to: "/admin", label: "Hackathons", icon: LayoutDashboard },
-    { to: "/admin/qr-monitor", label: "QR Monitor", icon: QrCode },
-    { to: "/helpline", label: "Helpline", icon: HelpCircle },
-];
+import { verifyFace } from "@/services/faceApi";
 
 const resultColors: Record<string, string> = {
     valid: "bg-success/10 text-success border-success/20",
@@ -293,31 +288,14 @@ export default function AdminQRMonitor() {
         setFaceCapturedImage(captured);
 
         try {
-            const blob = await (await fetch(captured)).blob();
-            const file = new File([blob], "verify.jpg", { type: "image/jpeg" });
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            const emailParam = `?email=${encodeURIComponent(faceVerifyEmail)}`;
-            const token = localStorage.getItem("auth_token");
-
-            const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-            const res = await fetch(`${BASE_URL}/api/face/verify${emailParam}`, {
-                method: "POST",
-                headers: {
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                body: formData,
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
+            const targetEmail = faceVerifyEmail || "";
+            const { response, data } = await verifyFace(captured, targetEmail);
+            if (!response.ok) {
                 throw new Error(data.message || "Verification request failed.");
             }
 
             if (data.success && data.verified) {
-                const simPct = Math.round(data.similarity * 100);
+                const simPct = Math.round((data.similarity ?? 0) * 100);
                 setFaceSimilarity(simPct);
                 
                 // Update local storage database verification status
@@ -487,7 +465,7 @@ export default function AdminQRMonitor() {
 
     return (
         <div className="flex min-h-screen pt-16">
-            <DashboardSidebar items={sidebarItems} title="Admin" />
+            <DashboardSidebar title="Admin" />
             <main className="flex-1 p-6 md:p-8 relative">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className="mb-6 flex items-center justify-between">

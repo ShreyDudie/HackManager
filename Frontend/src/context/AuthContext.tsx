@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { apiRequest, ApiError, USE_EXPRESS } from "@/services/apiClient";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type UserRole = "student" | "judge" | "admin";
 
@@ -12,6 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   signup: (data: {
     email: string;
@@ -25,18 +28,35 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-const API = `${BASE_URL}/api/auth`;
+const API = "/api/auth";
+type Account = { id: string; email: string; username: string; role: UserRole };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(USE_EXPRESS && !!localStorage.getItem("auth_token"));
   const [user, setUser] = useState<User | null>(() => {
+    if (USE_EXPRESS) return null;
     const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
+    try { return savedUser ? JSON.parse(savedUser) : null; } catch { return null; }
   });
+
+  useEffect(() => {
+    if (!USE_EXPRESS || !localStorage.getItem("auth_token")) return;
+    let active = true;
+    apiRequest<Account>(`${API}/me`).then((account) => {
+      if (active) setUser({ ...account, name: account.username });
+    }).catch((error: unknown) => {
+      if (active && error instanceof ApiError && error.status === 401) {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+      }
+    }).finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   // 🔐 LOGIN
   const login = async (email: string, password: string, role: UserRole) => {
-    const res = await fetch(`${API}/login/`, {
+    const data = await apiRequest<Account & { access: string }>(`${API}/login/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,21 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password, role }),
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(JSON.stringify(data));
-    }
-
     const loggedInUser: User = {
+      id: data.id,
       email: data.email,
-      name: data.email.split("@")[0],
+      name: data.username || data.email.split("@")[0],
       role: data.role,
     };
 
     localStorage.setItem("user", JSON.stringify(loggedInUser));
     localStorage.setItem("auth_token", data.access);
 
+    queryClient.clear();
     setUser(loggedInUser);
   };
 
@@ -76,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole;
     phone_number?: string;
   }) => {
-    const res = await fetch(`${API}/signup/`, {
+    await apiRequest(`${API}/signup/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -90,17 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }),
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(JSON.stringify(data));
-    }
-
     // Auto login after signup
     await login(email, password, role);
   };
 
   const logout = () => {
+    queryClient.clear();
     localStorage.removeItem("user");
     localStorage.removeItem("auth_token");
     setUser(null);
@@ -111,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
+        isLoading,
         login,
         signup,
         logout,

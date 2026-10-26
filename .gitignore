@@ -17,6 +17,7 @@ build/
 # IDE files
 .vscode/
 .idea/
+.agents/
 
 # Backend databases & logs
 *.log
@@ -24,7 +25,12 @@ build/
 # Local media uploads & data files
 backend/registered_faces/
 backend/face_embeddings/
+data/
+backend-node/uploads/
+backend-node/biometrics/
 
 # OS files
 .DS_Store
 Thumbs.db
+.playwright-cli/
+test-results/

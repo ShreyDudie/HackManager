@@ -14,18 +14,7 @@ import {
     getGitHubSubmission,
     setGitHubSubmission,
     findUserRegistration,
-} from "@/lib/storage";
-
-const sidebarItems = [
-    { to: "/student", label: "Overview", icon: LayoutDashboard },
-    { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-    { to: "/student/github", label: "GitHub Repo", icon: Github },
-    { to: "/student/qr", label: "My QR Code", icon: QrCode },
-    { to: "/student/notifications", label: "Notifications", icon: Bell },
-    { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-    { to: "/student/grievance", label: "Grievance & Support", icon: HelpCircle },
-    { to: "/student/linkedin", label: "LinkedIn Post", icon: Linkedin },
-];
+} from "@/lib/hackathonStore";
 
 // GitHub URL validation regex
 const GITHUB_URL_REGEX = /^https?:\/\/(www\.)?github\.com\/[\w.-]+\/[\w.-]+\/?$/i;
@@ -97,7 +86,7 @@ export default function GitHubRepo() {
 
     return (
         <div className="flex min-h-screen pt-16">
-            <DashboardSidebar items={sidebarItems} title="Student" />
+            <DashboardSidebar title="Student" />
             <main className="flex-1 p-6 md:p-8">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h1 className="mb-1 font-display text-2xl font-bold">Project Repository</h1>

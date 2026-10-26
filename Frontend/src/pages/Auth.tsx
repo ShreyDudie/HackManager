@@ -62,15 +62,8 @@ export default function Auth() {
         await login(email.trim(), password, role);
       }
       navigate(dashboardPath);
-    } catch (err: any) {
-      // Parse structured error messages from backend
-      try {
-        const parsed = JSON.parse(err.message);
-        const msgs = Object.values(parsed).flat().join(". ");
-        setError(msgs);
-      } catch {
-        setError(err.message || "Something went wrong");
-      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -91,14 +84,15 @@ export default function Auth() {
         </p>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</div>
+          <div role="alert" className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignup && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Name</label>
+              <label htmlFor="auth-name" className="mb-1.5 block text-sm font-medium">Name</label>
               <input
+                id="auth-name" autoComplete="name"
                 type="text"
                 required
                 value={name}
@@ -111,8 +105,9 @@ export default function Auth() {
             </div>
           )}
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Email</label>
+            <label htmlFor="auth-email" className="mb-1.5 block text-sm font-medium">Email</label>
             <input
+              id="auth-email" autoComplete="email"
               type="email"
               required
               value={email}
@@ -126,8 +121,9 @@ export default function Auth() {
           {/* Fix 1: Phone number field (signup only) */}
           {isSignup && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Phone Number <span className="text-muted-foreground text-xs">(optional)</span></label>
+              <label htmlFor="auth-phone" className="mb-1.5 block text-sm font-medium">Phone Number <span className="text-muted-foreground text-xs">(optional)</span></label>
               <input
+                id="auth-phone" autoComplete="tel"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -140,9 +136,10 @@ export default function Auth() {
             </div>
           )}
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Password</label>
+            <label htmlFor="auth-password" className="mb-1.5 block text-sm font-medium">Password</label>
             <div className="relative">
               <input
+                id="auth-password" autoComplete={isSignup ? "new-password" : "current-password"}
                 type={showPw ? "text" : "password"}
                 required
                 value={password}
@@ -151,7 +148,7 @@ export default function Auth() {
                 className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 placeholder="••••••••"
               />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <button type="button" aria-label={showPw ? "Hide password" : "Show password"} onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>

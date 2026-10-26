@@ -7,15 +7,16 @@ import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useEffect } from "react";
+import { API_BASE_URL, USE_EXPRESS } from "@/services/apiClient";
+import ExpressRoutes from "@/components/ExpressRoutes";
 
 // ── Intercept localStorage globally for real-time cross-browser synchronization ──
 const originalSetItem = localStorage.setItem;
 const originalRemoveItem = localStorage.removeItem;
 
-const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-const SYNC_URL = `${BASE_URL}/api/auth/sync/`;
+const SYNC_URL = `${API_BASE_URL}/api/auth/sync/`;
 
-localStorage.setItem = function (key, value) {
+if (!USE_EXPRESS) localStorage.setItem = function (key, value) {
   originalSetItem.apply(this, arguments as any);
   if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
     fetch(SYNC_URL, {
@@ -26,7 +27,7 @@ localStorage.setItem = function (key, value) {
   }
 };
 
-localStorage.removeItem = function (key) {
+if (!USE_EXPRESS) localStorage.removeItem = function (key) {
   originalRemoveItem.apply(this, arguments as any);
   if (key.startsWith("sq_") || key === "global_hackathons" || key === "user_registrations") {
     fetch(SYNC_URL, {
@@ -71,6 +72,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
+    if (USE_EXPRESS) return;
     const syncState = async () => {
       try {
         const res = await fetch(`${SYNC_URL}?_t=${Date.now()}`);
@@ -104,7 +106,7 @@ const App = () => {
           <ErrorBoundary>
             <div className="min-h-screen bg-background font-sans text-foreground antialiased selection:bg-primary/20 selection:text-primary">
               <Navbar />
-              <Routes>
+              {USE_EXPRESS ? <ExpressRoutes /> : <Routes>
                 {/* ── Public Routes ── */}
                 <Route path="/" element={<Index />} />
                 <Route path="/role-select" element={<RoleSelect />} />
@@ -235,7 +237,7 @@ const App = () => {
 
                 {/* ── 404 ── */}
                 <Route path="*" element={<NotFound />} />
-              </Routes>
+              </Routes>}
               <Toaster />
 
               <Sonner />

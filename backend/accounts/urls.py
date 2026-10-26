@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import SignupView, LoginView, SharedStateSyncView
+from .auth_views import LoginView, SignupView
 from .media_views import PDFUploadView
+from .shared_state_views import SharedStateSyncView
 
 urlpatterns = [
     path("signup/", SignupView.as_view()),

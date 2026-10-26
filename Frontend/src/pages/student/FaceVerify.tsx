@@ -11,18 +11,8 @@ import { LayoutDashboard, Upload, Github, QrCode, Bell, UserCheck, Camera, Check
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
-import { findUserRegistration, updateRegistration, updateMemberVerification } from "@/lib/storage";
-
-const sidebarItems = [
-    { to: "/student", label: "Overview", icon: LayoutDashboard },
-    { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-    { to: "/student/github", label: "GitHub Repo", icon: Github },
-    { to: "/student/qr", label: "My QR Code", icon: QrCode },
-    { to: "/student/notifications", label: "Notifications", icon: Bell },
-    { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-    { to: "/student/grievance", label: "Grievance & Support", icon: HelpCircle },
-    { to: "/student/linkedin", label: "LinkedIn Post", icon: Linkedin },
-];
+import { findUserRegistration, updateRegistration, updateMemberVerification } from "@/lib/hackathonStore";
+import { registerFace } from "@/services/faceApi";
 
 export default function FaceVerify() {
     const { user } = useAuth();
@@ -115,25 +105,8 @@ export default function FaceVerify() {
         if (user?.email) {
             setRegistering(true);
             try {
-                // Convert base64 to File object for multipart upload
-                const blob = await (await fetch(imageData)).blob();
-                const file = new File([blob], "face.jpg", { type: "image/jpeg" });
-                
-                const formData = new FormData();
-                formData.append("file", file);
-
-                const token = localStorage.getItem("auth_token");
-                const BASE_URL = import.meta.env.VITE_API_URL || "https://hackmanager-2.onrender.com";
-                const res = await fetch(`${BASE_URL}/api/face/register`, {
-                    method: "POST",
-                    headers: {
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
-                    body: formData,
-                });
-
-                const data = await res.json();
-                if (!res.ok || !data.success) {
+                const { response, data } = await registerFace(imageData);
+                if (!response.ok || !data.success) {
                     throw new Error(data.message || "Failed to register face on server.");
                 }
 
@@ -168,7 +141,7 @@ export default function FaceVerify() {
 
     return (
         <div className="flex min-h-screen pt-16">
-            <DashboardSidebar items={sidebarItems} title="Student" />
+            <DashboardSidebar title="Student" />
             <main className="flex-1 p-6 md:p-8">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h1 className="mb-1 font-display text-2xl font-bold">Face Verification</h1>

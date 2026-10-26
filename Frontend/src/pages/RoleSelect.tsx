@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { GraduationCap, Scale, ShieldCheck, ArrowRight } from "lucide-react";
+import { USE_EXPRESS } from "@/services/apiClient";
 
 const roles = [
   {
@@ -53,12 +54,13 @@ export default function RoleSelect() {
               <h2 className="mb-2 font-display text-xl font-semibold">{r.label}</h2>
               <p className="mb-6 text-sm text-muted-foreground">{r.desc}</p>
               <div className="mt-auto flex w-full flex-col gap-2">
-                <Link
+                {(!USE_EXPRESS || r.key === "student") && <Link
                   to={`/auth/signup?role=${r.key}`}
                   className="btn-primary-glow flex items-center justify-center gap-1.5 text-sm"
                 >
                   Sign Up <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+                </Link>}
+                {USE_EXPRESS && r.key !== "student" && <p className="text-xs text-muted-foreground">Use your organizer-provided account.</p>}
                 <Link
                   to={`/auth/login?role=${r.key}`}
                   className="rounded-lg border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"

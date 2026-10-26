@@ -9,18 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { LayoutDashboard, Upload, Github, QrCode, Bell, UserCheck, Megaphone, HelpCircle, Linkedin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { getNotifications, findUserRegistration, type Notification } from "@/lib/storage";
-
-const sidebarItems = [
-    { to: "/student", label: "Overview", icon: LayoutDashboard },
-    { to: "/student/ppt-upload", label: "PPT Upload", icon: Upload },
-    { to: "/student/github", label: "GitHub Repo", icon: Github },
-    { to: "/student/qr", label: "My QR Code", icon: QrCode },
-    { to: "/student/notifications", label: "Notifications", icon: Bell },
-    { to: "/student/verify", label: "Face Verify", icon: UserCheck },
-    { to: "/student/grievance", label: "Grievance & Support", icon: HelpCircle },
-    { to: "/student/linkedin", label: "LinkedIn Post", icon: Linkedin },
-];
+import { getNotifications, findUserRegistration, type Notification } from "@/lib/hackathonStore";
 
 export default function Notifications() {
     const { user } = useAuth();
@@ -50,7 +39,7 @@ export default function Notifications() {
 
     return (
         <div className="flex min-h-screen pt-16">
-            <DashboardSidebar items={sidebarItems} title="Student" />
+            <DashboardSidebar title="Student" />
             <main className="flex-1 p-6 md:p-8">
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <h1 className="mb-1 font-display text-2xl font-bold">Notifications</h1>

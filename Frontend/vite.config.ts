@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    strictPort: true,
+    proxy: {
+      "/api": "http://127.0.0.1:8000",
+      "/media": "http://127.0.0.1:8000",
+    },
     hmr: {
       overlay: false,
     },

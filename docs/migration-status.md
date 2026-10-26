@@ -1,0 +1,15 @@
+# Migration status
+
+Implemented alongside Django: Express auth/media/face endpoints, JWT access tokens, bcrypt password writes, a private FastAPI face service, a Drizzle SQLite schema/migrator, and persistent hackathon, team-registration, member, repository, presentation-submission, and transactional check-in APIs.
+
+The frontend's explicit `VITE_BACKEND_MODE=express` preview connects the event listing, event creation, team registration, repository/presentation submission, authenticated PDF download, pass issuance, and organizer check-in screens. This workspace's local `.env` and `.env.example` select Express; deployments without that setting retain the legacy UI. React Query owns these server records; the legacy localStorage interceptor and sync poller are disabled in Express mode. Login restores identity through `/api/auth/me`, and logout clears cached queries. Shared request/error handling lives in `services/apiClient.ts`; typed event operations live in `services/eventsApi.ts`.
+
+The new event screens use the existing ivory/cobalt theme. The original pages remain available with `VITE_BACKEND_MODE=django` and a Django `VITE_API_URL`. Modes are separate: there is no dual write or silent local-storage fallback. Existing browser data is preserved.
+
+Not completed: event editing/deletion, rounds and criteria, teammate account linking, judge assignments/scoring/results, announcements, support, AI proxies, camera scanning, face UI integration, full domain importer, migration rehearsal, or production cutover. Those unfinished routes show an unavailable message in Express mode. Check-in currently covers one team pass per purpose/day, with entry required before meals; event-day/shortlist eligibility and ordered meals still need implementation.
+
+Validation on 2026-10-26: five backend tests (including ownership, bcrypt bounds, legacy hashes, submissions, QR replacement/duplicate handling), three frontend tests, TypeScript checks, and production build. Playwright CLI exercised independent organizer/student browser contexts against a disposable database: event creation, signup, registration, repository/PDF submission and download, reload persistence, organizer visibility, QR replacement and duplicate redemption, role redirects, logout, empty/404 states, and overflow at 320/390/768/1440px. See `Frontend/tests/browser/event-flow.js` and `docs/express-development.md`. This is coverage of the connected slice, not a claim that all planned features work.
+
+Run `npm --prefix backend-node run db:migrate`, then `npm --prefix backend-node run import:legacy -- --dry-run` before importing. The importer preserves shared-state JSON as `LegacyState`; it does not yet translate local browser records into event, team, scoring, QR, or support tables. Django remains the source of truth for legacy records. New Express-mode records live only in the separate Drizzle database.
+
+Drizzle uses the existing `better-sqlite3` driver and applies generated migration files through its official SQLite migrator. The database is still a separate migration target; no legacy records are imported without a reviewed dry run.

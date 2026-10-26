@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from .face_utils import decode_uploaded_image
 
 REGISTER_DIR = "registered_faces"
 EMBEDDING_DIR = "face_embeddings"
@@ -130,13 +131,9 @@ class FaceRegisterView(APIView):
             return Response({"success": False, "message": "No image file provided"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            contents = file_obj.read()
-            nparr = np.frombuffer(contents, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            img, img_rgb = decode_uploaded_image(file_obj)
             if img is None:
                 return Response({"success": False, "message": "Invalid image format"}, status=status.HTTP_400_BAD_REQUEST)
-
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             embedding, error = get_normalized_embedding(img_rgb)
 
             if embedding is None:
@@ -173,13 +170,9 @@ class FaceVerifyView(APIView):
             return Response({"success": False, "verified": False, "message": "No file uploaded", "similarity": 0}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            contents = file_obj.read()
-            nparr = np.frombuffer(contents, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            img, img_rgb = decode_uploaded_image(file_obj)
             if img is None:
                 return Response({"success": False, "verified": False, "message": "Invalid image", "similarity": 0}, status=status.HTTP_200_OK)
-
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             captured_emb, error = get_normalized_embedding(img_rgb)
 
             if captured_emb is None:

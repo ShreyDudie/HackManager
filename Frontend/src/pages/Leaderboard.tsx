@@ -13,7 +13,7 @@ import {
   getJudgeAssignments,
   type Hackathon,
   type JudgeAssignment,
-} from "@/lib/storage";
+} from "@/lib/hackathonStore";
 
 interface LeaderboardEntry {
   rank: number;
