@@ -20,9 +20,14 @@ const eventSchema = z.object({
   status: eventStatus.default("Coming Soon"),
   theme: z.string().max(300).default(""),
   rules: z.string().max(10_000).default(""),
+  location: z.string().max(300).default("Campus Main Auditorium"),
+  headerImage: z.string().max(1_000_000).default(""),
+  stages: z.union([z.string(), z.array(z.any())]).default([]),
+  problemStatements: z.union([z.string(), z.array(z.any())]).default([]),
+  schedules: z.union([z.string(), z.record(z.any())]).default({}),
 }).refine((value) => value.minTeamSize <= value.maxTeamSize, { message: "Minimum team size cannot exceed maximum", path: ["minTeamSize"] })
   .refine((value) => value.startDate <= value.endDate, { message: "Start date must not be after end date", path: ["startDate"] })
-  .refine((value) => value.registrationDeadline <= value.startDate, { message: "Registration deadline must be on or before the start date", path: ["registrationDeadline"] });
+  .refine((value) => value.registrationDeadline <= value.endDate, { message: "Registration deadline must not be after the event end date", path: ["registrationDeadline"] });
 
 const memberSchema = z.object({
   name: z.string().trim().min(1).max(150),
@@ -51,7 +56,17 @@ hackathonRouter.post("/", requireAuth, requireRole("admin"), (request, response,
     const parsed = eventSchema.safeParse(request.body);
     if (!parsed.success) throw new AppError(400, "INVALID_INPUT", "Check the highlighted fields", parsed.error.flatten().fieldErrors);
     const owner = response.locals.user as AuthUser;
-    const event = { id: randomUUID(), ownerId: owner.id, ...parsed.data };
+    const stages = typeof parsed.data.stages === "string" ? parsed.data.stages : JSON.stringify(parsed.data.stages);
+    const problemStatements = typeof parsed.data.problemStatements === "string" ? parsed.data.problemStatements : JSON.stringify(parsed.data.problemStatements);
+    const schedules = typeof parsed.data.schedules === "string" ? parsed.data.schedules : JSON.stringify(parsed.data.schedules);
+    const event = {
+      id: randomUUID(),
+      ownerId: owner.id,
+      ...parsed.data,
+      stages,
+      problemStatements,
+      schedules,
+    };
     db.insert(hackathons).values(event).run();
     response.status(201).json(event);
   } catch (error) { next(error); }

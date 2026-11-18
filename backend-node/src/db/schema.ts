@@ -51,6 +51,11 @@ export const hackathons = sqliteTable("hackathons", {
   status: text("status").notNull().default("Coming Soon"),
   theme: text("theme").notNull().default(""),
   rules: text("rules").notNull().default(""),
+  location: text("location").notNull().default("Campus Main Auditorium"),
+  headerImage: text("header_image").notNull().default(""),
+  stages: text("stages").notNull().default("[]"),
+  problemStatements: text("problem_statements").notNull().default("[]"),
+  schedules: text("schedules").notNull().default("{}"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

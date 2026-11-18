@@ -36,6 +36,13 @@
       "when": 1795008277801,
       "tag": "0004_event_workflows",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795023000000,
+      "tag": "0005_hackathon_stages_and_details",
+      "breakpoints": true
     }
   ]
 }

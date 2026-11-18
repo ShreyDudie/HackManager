@@ -29,6 +29,42 @@ uploadRouter.post("/auth/pdf-upload/", requireAuth, upload.single("file"), async
   } catch (error) { next(error); }
 });
 
+uploadRouter.post("/upload/image", requireAuth, upload.single("image"), async (request, response, next) => {
+  try {
+    const file = request.file;
+    if (!file) throw new AppError(400, "INVALID_FILE", "Image file is required");
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.mimetype)) {
+      throw new AppError(400, "INVALID_IMAGE", "Only JPG, PNG, WebP or GIF images are allowed");
+    }
+    const bannersDir = path.join(env.UPLOAD_DIR, "banners");
+    await mkdir(bannersDir, { recursive: true });
+    const ext = path.extname(file.originalname).toLowerCase() || ".png";
+    const storedName = `${randomUUID()}${ext}`;
+    await writeFile(path.join(bannersDir, storedName), file.buffer);
+    const url = `/media/banners/${storedName}`;
+    response.status(201).json({ url, filename: file.originalname });
+  } catch (error) { next(error); }
+});
+
+mediaRouter.get("/media/banners/:filename", async (request, response, next) => {
+  try {
+    const filename = path.basename(String(request.params.filename));
+    const filePath = path.join(env.UPLOAD_DIR, "banners", filename);
+    const content = await readFile(filePath).catch(() => null);
+    if (!content) throw new AppError(404, "IMAGE_NOT_FOUND", "Banner image not found");
+    const ext = path.extname(filename).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".webp": "image/webp",
+      ".gif": "image/gif",
+    };
+    response.type(mimeMap[ext] || "image/jpeg").send(content);
+  } catch (error) { next(error); }
+});
+
 mediaRouter.get("/media/:id", requireAuth, async (request, response, next) => {
   try {
     const document = db.select().from(fileUploads).where(eq(fileUploads.id, String(request.params.id))).get();

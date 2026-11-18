@@ -13,7 +13,7 @@ const queryClient = new QueryClient();
 
 export default function App() {
   return <QueryClientProvider client={queryClient}>
-    <TooltipProvider><AuthProvider><BrowserRouter><ErrorBoundary>
+    <TooltipProvider><AuthProvider><BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><ErrorBoundary>
       <div className="min-h-screen bg-background font-sans text-foreground antialiased selection:bg-primary/20 selection:text-primary">
         <Navbar />
         <Suspense fallback={<p role="status" className="container pt-28">Loading page…</p>}>
