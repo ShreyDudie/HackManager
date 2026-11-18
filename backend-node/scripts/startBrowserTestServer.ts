@@ -17,4 +17,5 @@ const { users } = await import("../src/db/schema");
 const { hashPassword } = await import("../src/modules/auth/passwords");
 db.insert(users).values({ id: "browser-test-admin", email: "organizer@example.test", username: "Organizer", role: "admin", passwordHash: await hashPassword("browser-test-password") }).run();
 const { app } = await import("../src/app");
+db.insert(users).values({ id: "browser-test-judge", email: "judge@example.test", username: "Judge", role: "judge", passwordHash: await hashPassword("browser-test-password") }).run();
 app.listen(8010, "127.0.0.1", () => console.log("Disposable browser-test API: http://127.0.0.1:8010"));

@@ -4,19 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "react-qr-code";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/services/apiClient";
-import { downloadSubmission, eventsApi, type EventRecord, type Member, type Submission } from "@/services/eventsApi";
+import { eventsApi, type EventRecord, type Member } from "@/services/eventsApi";
+import SubmissionList from "./SubmissionList";
+import EventActivity from "./EventActivity";
 
 const field = "mt-2 w-full rounded-lg border bg-white p-3";
 
-function SubmissionList({ submissions }: { submissions: Submission[] }) {
-  const download = useMutation({ mutationFn: (submission: Submission) => downloadSubmission(submission.fileUploadId!, submission.name) });
-  return <div className="space-y-3">{submissions.length === 0 && <p className="text-sm text-muted-foreground">No submissions yet.</p>}
-    {submissions.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-secondary/50 p-4">
-      <span className="break-all">{item.name} <span className="text-xs text-muted-foreground">({item.kind})</span></span>
-      {item.url && <a className="text-primary underline" href={item.url} target="_blank" rel="noreferrer">Open submission</a>}
-      {item.fileUploadId && <button className="text-primary underline" disabled={download.isPending} onClick={() => download.mutate(item)}>Download PDF</button>}
-    </div>)}{download.isError && <p role="alert">{download.error.message}</p>}</div>;
-}
 
 function StudentWorkspace({ event }: { event: EventRecord }) {
   const { user } = useAuth();
@@ -109,6 +102,7 @@ export default function EventWorkspace() {
       {!user && <Link className="btn-primary-glow inline-block" to="/auth/login?role=student">Sign in to register</Link>}
       {user?.role === "student" && <StudentWorkspace key={`${id}-${user.id}`} event={event.data} />}
       {user?.role === "admin" && event.data.ownerId === user.id && <OrganizerWorkspace key={id} event={event.data} />}
+      <EventActivity key={event.data.id} event={event.data} />
     </>}
   </main>;
 }

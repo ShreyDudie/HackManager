@@ -105,7 +105,7 @@ test("admins create hackathons and students register a team once", async () => {
   const unrelatedId = "other-admin";
   db.insert(users).values({ id: unrelatedId, email: "other-admin@example.com", username: "Other", role: "admin", passwordHash: "unused" }).run();
   const unrelatedToken = jwt.sign({}, env.JWT_SECRET, { subject: unrelatedId, expiresIn: "1h" });
-  for (const resource of ["registrations", "submissions", "check-ins"]) {
+  for (const resource of ["registrations", "submissions", "check-ins", "tickets"]) {
     const result = await api.get(`/api/hackathons/${created.body.id}/${resource}`).set("authorization", `Bearer ${unrelatedToken}`);
     assert.equal(result.status, 404);
   }
@@ -116,6 +116,26 @@ test("admins create hackathons and students register a team once", async () => {
   assert.equal(ownerDownload.status, 200);
   const unrelatedDownload = await api.get(`/media/${uploaded.body.id}`).set("authorization", `Bearer ${unrelatedToken}`);
   assert.equal(unrelatedDownload.status, 404);
+
+  const base = "/api/hackathons/" + created.body.id;
+  const judgeAuth = (id: string) => "Bearer " + jwt.sign({}, env.JWT_SECRET, { subject: id, expiresIn: "1h" });
+  for (const id of ["judge-one", "judge-two", "judge-three"]) {
+    db.insert(users).values({ id, email: id + "@example.test", username: id, role: "judge", passwordHash: "unused" }).run();
+  }
+  for (const [index, score] of [0, 70, 80].entries()) {
+    const id = ["judge-one", "judge-two", "judge-three"][index];
+    const assignment = await api.post(base + "/assignments").set("authorization", judgeAuth(adminId)).send({ teamId: registration.body.id, email: id + "@example.test" }).expect(201);
+    const path = "/api/judge-assignments/" + assignment.body.id + "/score";
+    assert.equal((await api.get(base + "/leaderboard")).body[0].score, null);
+    await api.put(path).set("authorization", judgeAuth(id === "judge-two" ? "judge-one" : "judge-two")).send({ score, feedback: "" }).expect(404);
+    await api.put(path).set("authorization", judgeAuth(id)).send({ score, feedback: "Reviewed" }).expect(200);
+  }
+  assert.equal((await api.get(base + "/leaderboard")).body[0].score, 50);
+  db.insert(users).values({ id: "other-student", email: "other@example.test", username: "Other", role: "student", passwordHash: "unused" }).run();
+  const issue = await api.post(base + "/tickets").set("authorization", "Bearer " + token).send({ subject: "Schedule", message: "When are demos?" }).expect(201);
+  const otherStudent = judgeAuth("other-student");
+  assert.deepEqual((await api.get(base + "/tickets").set("authorization", otherStudent)).body, []);
+  await api.post(base + "/tickets/" + issue.body.id + "/messages").set("authorization", otherStudent).send({ message: "Reply" }).expect(404);
 
   const closed = await api.post("/api/hackathons").set("authorization", `Bearer ${adminToken}`).send({ name: "Past event", description: "Registration ended", startDate: "2020-11-08", endDate: "2020-11-09", registrationDeadline: "2020-11-07", minTeamSize: 1, maxTeamSize: 3, status: "Open" });
   const late = await api.post(`/api/hackathons/${closed.body.id}/registrations`).set("authorization", `Bearer ${token}`).send({ teamName: "Late team" });

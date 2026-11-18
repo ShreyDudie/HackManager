@@ -1,17 +1,16 @@
 services:
   api:
     build:
-      context: .
-      dockerfile: backend-node/Dockerfile
+      context: ./backend-node
     environment:
       PORT: 8000
-      DB_FILE_NAME: /data/hackmanager.db
+      DB_FILE_NAME: ${DB_FILE_NAME:-/data/hackmanager-live.db}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your environment}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       FACE_SERVICE_URL: http://face-service:8001
       FACE_SERVICE_KEY: ${FACE_SERVICE_KEY:?set FACE_SERVICE_KEY in your environment}
-      UPLOAD_DIR: ../data/uploads
-      BIOMETRIC_DIR: ../data/biometrics
+      UPLOAD_DIR: /data/uploads
+      BIOMETRIC_DIR: /data/biometrics
     ports:
       - "8000:8000"
     volumes:
@@ -21,8 +20,7 @@ services:
         condition: service_healthy
   face-service:
     build:
-      context: .
-      dockerfile: services/face-service/Dockerfile
+      context: ./services/face-service
     environment:
       FACE_SERVICE_KEY: ${FACE_SERVICE_KEY:?set FACE_SERVICE_KEY in your environment}
     expose:

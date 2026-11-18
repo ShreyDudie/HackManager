@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // LinkedInPost.tsx — Feature 4: Auto-generate LinkedIn post after hackathon
 // Editable preview, copy to clipboard, download as .txt. No OAuth required.
@@ -92,8 +93,8 @@ export default function LinkedInPostPage() {
                 generatedAt: new Date().toISOString(),
             });
             toast({ title: "Post Generated!" });
-        } catch (err: any) {
-            toast({ title: "Error", description: err.message, variant: "destructive" });
+        } catch (err: unknown) {
+            toast({ title: "Error", description: errorMessage(err), variant: "destructive" });
         } finally {
             setGenerating(false);
         }

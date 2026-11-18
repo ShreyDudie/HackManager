@@ -23,8 +23,6 @@ build/
 *.log
 
 # Local media uploads & data files
-backend/registered_faces/
-backend/face_embeddings/
 data/
 backend-node/uploads/
 backend-node/biometrics/

@@ -9,6 +9,7 @@ import { users } from "../../db/schema";
 import { requireAuth, type AuthUser } from "../../middleware/auth";
 import { AppError } from "../../middleware/errors";
 import { hashPassword, needsRehash, verifyPassword } from "./passwords";
+import { accountEmail } from "./accountEmail";
 
 const role = z.enum(["student", "judge", "admin"]);
 const signupSchema = z.object({
@@ -18,7 +19,7 @@ const signupSchema = z.object({
   role,
   phone_number: z.string().regex(/^\d{10}$/).optional(),
 });
-const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1), role });
+const loginSchema = z.object({ email: accountEmail, password: z.string().min(1), role });
 
 function publicUser(user: { id: string; email: string; username: string; role: AuthUser["role"] }) {
   return { id: user.id, email: user.email, username: user.username, role: user.role };

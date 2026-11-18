@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // JudgeDashboard.tsx — Patches 5, 7, 8: real repo fetch + AI cache + judge list
 // Fetches actual README.md before calling Groq. Caches in sq_ai_cache.
@@ -71,7 +72,7 @@ function parseInlineFormatting(text: string) {
 function renderFormattedMessage(text: string) {
   const lines = text.split("\n");
   return lines.map((line, idx) => {
-    const bulletMatch = line.match(/^(\s*)[*\-]\s+(.*)$/);
+    const bulletMatch = line.match(/^(\s*)[*-]\s+(.*)$/);
     if (bulletMatch) {
       const content = bulletMatch[2];
       return (
@@ -263,8 +264,8 @@ export default function JudgeDashboard() {
           : a
       ));
       toast({ title: "AI Evaluation Complete", description: `Score: ${result.score}/100` });
-    } catch (err: any) {
-      toast({ title: "AI Error", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "AI Error", description: errorMessage(err), variant: "destructive" });
     } finally {
       setAiLoading(null);
     }
@@ -302,8 +303,8 @@ export default function JudgeDashboard() {
       saveProjectSnapshot(snapshot);
       setSnapshots((prev) => ({ ...prev, [assignment.teamId]: snapshot }));
       toast({ title: "Snapshot Generated" });
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Error", description: errorMessage(err), variant: "destructive" });
     } finally {
       setSnapshotLoading(null);
     }
@@ -341,8 +342,8 @@ export default function JudgeDashboard() {
         chatRepoContent
       );
       setChatMessages((prev) => [...prev, { role: "assistant", content: response }]);
-    } catch (err: any) {
-      setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
+    } catch (err: unknown) {
+      setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errorMessage(err)}` }]);
     } finally {
       setChatLoading(false);
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);

@@ -1,6 +1,6 @@
 # Express development and browser checks
 
-Select the new frontend with `VITE_BACKEND_MODE=express`. Core event/team/submission/check-in flows work; consult [migration status](migration-status.md) for unfinished features. Legacy Django data is not automatically migrated. Without this explicit setting the legacy interface is retained, so existing deployments are not silently cut over.
+React uses Express for all active routes. See [cutover status](migration-status.md) for imported data and remaining feature gaps.
 
 ## Run locally
 
@@ -21,7 +21,7 @@ if (-not (Test-Path Frontend/.env)) { Copy-Item Frontend/.env.example Frontend/.
 npm --prefix Frontend run dev
 ```
 
-Open `http://localhost:8080`. Express uses port 8000. An empty `VITE_API_URL` uses Vite's `/api` and `/media` proxy; an explicit `http://127.0.0.1:8000` also works with the default CORS origins. Set `VITE_BACKEND_MODE=express`. Restart Vite after changing environment values.
+Open `http://localhost:8080`. Express uses port 8000. An empty `VITE_API_URL` uses Vite's `/api` and `/media` proxy; an explicit `http://127.0.0.1:8000` also works with the default CORS origins. Restart Vite after changing environment values.
 
 `backend-node/.env.example` documents database, JWT, CORS, uploads and vision-service settings. Copy it to `.env` if overrides are needed; runtime now loads this file. Production needs a real JWT secret and a private face-service key. Configure the deployed API origin via `VITE_API_URL`, or route `/api` and `/media` to Express at the hosting layer; Vite's development proxy does not apply to production builds.
 
@@ -37,7 +37,6 @@ npm --prefix backend-node run account:create
 Remove-Item Env:ACCOUNT_PASSWORD
 ```
 
-To use the original interface, explicitly set `VITE_BACKEND_MODE=django` and point `VITE_API_URL` at Django. Do not use the Express URL in Django mode. Do not import production data until the full import/rehearsal phase is complete. Local business records are retained but not read in Express mode.
 
 ## Repeat the Playwright CLI check
 
@@ -53,7 +52,6 @@ Terminal 2:
 
 ```powershell
 $env:VITE_API_URL = 'http://127.0.0.1:8010'
-$env:VITE_BACKEND_MODE = 'express'
 npm --prefix Frontend run dev
 ```
 

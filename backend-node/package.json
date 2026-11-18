@@ -12,7 +12,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "import:legacy": "tsx scripts/importLegacyData.ts",
     "account:create": "tsx scripts/createAccount.ts",
-    "test:browser-server": "tsx scripts/startBrowserTestServer.ts"
+    "test:browser-server": "tsx scripts/startBrowserTestServer.ts",
+    "seed": "tsx scripts/seedAccounts.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

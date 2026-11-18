@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // AdminQRMonitor.tsx — Live QR Scanner & Progression Simulator
 // Powered by html5-qrcode. Automatic verification & database check-ins.
@@ -11,7 +12,7 @@ import {
     Camera, CameraOff, Volume2, History, CheckCircle2, AlertTriangle, XCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,7 +44,7 @@ const resultColors: Record<string, string> = {
 // ── Synthesizer audio checkmarks (No static file dependencies) ──
 function playScanSound(type: "valid" | "duplicate" | "invalid" | "expired") {
     try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const ctx = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
@@ -156,7 +157,7 @@ export default function AdminQRMonitor() {
     const [simDay, setSimDay] = useState("1");
     const [simulating, setSimulating] = useState(false);
 
-    const loadData = () => {
+    const loadData = useCallback(() => {
         setHackathons(getHackathons());
         const hid = selectedHackathon === "all" ? undefined : selectedHackathon;
         setStats(getQRStats(hid));
@@ -164,13 +165,13 @@ export default function AdminQRMonitor() {
         
         // Load eligible teams for simulator
         setRegistrations(getRegistrations(hid));
-    };
+    }, [selectedHackathon]);
 
     useEffect(() => {
         loadData();
         const iv = setInterval(loadData, 5000);
         return () => clearInterval(iv);
-    }, [selectedHackathon]);
+    }, [loadData]);
 
     // Handle scanner cleanup
     useEffect(() => {
@@ -214,13 +215,13 @@ export default function AdminQRMonitor() {
                         },
                         () => {} // silent frame failures
                     );
-                } catch (err: any) {
-                    setScannerError(err.message || "Failed to initialize webcam scanner.");
+                } catch (err: unknown) {
+                    setScannerError(errorMessage(err, "Failed to initialize webcam scanner."));
                     setCameraActive(false);
                 }
             }, 100);
-        } catch (e: any) {
-            setScannerError(e.message || "Camera permission issue.");
+        } catch (e: unknown) {
+            setScannerError(errorMessage(e, "Camera permission issue."));
             setCameraActive(false);
         }
     };
@@ -317,7 +318,7 @@ export default function AdminQRMonitor() {
                     variant: "destructive",
                 });
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             toast({
                 title: "Server Verification Offline",
                 description: "Using local fallback comparison.",
@@ -364,13 +365,13 @@ export default function AdminQRMonitor() {
     };
 
     // Shared execution route
-    const triggerScanProcess = async (payload: any) => {
+    const triggerScanProcess = async (payload: Parameters<typeof processQRScan>[0]) => {
         try {
             const res = await processQRScan(payload);
             const userEmail = payload.userId || payload.userEmail || "";
             handleScanResult(res.result, res.success ? "Success" : "Denied", res.message, userEmail);
-        } catch (err: any) {
-            handleScanResult("invalid", "Scan Error", err.message || "System error during validation.");
+        } catch (err: unknown) {
+            handleScanResult("invalid", "Scan Error", errorMessage(err, "System error during validation."));
         }
     };
 
@@ -416,7 +417,7 @@ export default function AdminQRMonitor() {
                     hackathonId: reg.hackathonId,
                     userId: reg.userEmail,
                     teamName: reg.teamName,
-                    type: "registration",
+                    type: "registration" as const,
                     timestamp: timePeriod,
                     hash: hash.slice(0, 16)
                 };
@@ -429,13 +430,13 @@ export default function AdminQRMonitor() {
 
                 // Auto-generate tokens if student hasn't done it yet (simulating self-service generation)
                 if (!matchedToken) {
-                    for (const mType of ["breakfast", "lunch", "dinner"]) {
+                    for (const mType of ["breakfast", "lunch", "dinner"] as const) {
                         const hash = await sha256(`meal|${reg.userEmail}|${reg.hackathonId}|${mType}|day${dayInt}|${Date.now()}`);
                         addQRToken({
                             id: crypto.randomUUID().slice(0, 8),
                             hackathonId: reg.hackathonId,
                             userEmail: reg.userEmail,
-                            type: mType as any,
+                            type: mType,
                             day: dayInt,
                             token: hash,
                             used: false,
@@ -456,8 +457,8 @@ export default function AdminQRMonitor() {
                 };
                 await triggerScanProcess(payload);
             }
-        } catch (err: any) {
-            toast({ title: "Simulation Failed", description: err.message, variant: "destructive" });
+        } catch (err: unknown) {
+            toast({ title: "Simulation Failed", description: errorMessage(err), variant: "destructive" });
         } finally {
             setSimulating(false);
         }
@@ -567,7 +568,7 @@ export default function AdminQRMonitor() {
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-in Type</label>
-                                            <Select value={simType} onValueChange={(v: any) => setSimType(v)}>
+                                            <Select value={simType} onValueChange={(v) => setSimType(v as typeof simType)}>
                                                 <SelectTrigger className="mt-1">
                                                     <SelectValue />
                                                 </SelectTrigger>

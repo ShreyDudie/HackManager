@@ -297,10 +297,10 @@ function writeObject<T>(key: string, data: T): void {
 
 export function getHackathons(): Hackathon[] {
     // Migrate legacy "global_hackathons" format
-    const legacy = readArray<any>("global_hackathons");
+    const legacy = readArray<Partial<Hackathon>>("global_hackathons");
     const current = readArray<Hackathon>(KEYS.HACKATHONS);
     if (legacy.length > 0 && current.length === 0) {
-        const migrated: Hackathon[] = legacy.map((h: any) => ({
+        const migrated: Hackathon[] = legacy.map((h) => ({
             id: h.id || crypto.randomUUID().slice(0, 8),
             name: h.name || "Unnamed",
             description: h.description || h.desc || "",
@@ -392,22 +392,22 @@ export function deleteHackathon(id: string): void {
    ================================================================ */
 
 /** Migrate old memberNames[] → members[] with TeamMember objects */
-function migrateRegistration(r: any): Registration {
-    const members: TeamMember[] = r.members && Array.isArray(r.members)
-        ? r.members.map((m: any) => ({
-            name: m.name || m || "",
+type StoredRegistration = Partial<Omit<Registration, "members">> & {
+    members?: (Partial<TeamMember> | string)[];
+};
+
+function migrateRegistration(r: StoredRegistration): Registration {
+    const members: TeamMember[] = (Array.isArray(r.members) ? r.members : r.memberNames || []).map((member) => {
+        const m = typeof member === "string" ? { name: member } : member;
+        return {
+            name: m.name || "",
+            email: m.email || "",
             phone: m.phone || "",
             college: m.college || "",
             faceEncoding: m.faceEncoding || null,
             verificationStatus: m.verificationStatus || false,
-        }))
-        : (r.memberNames || []).map((name: string) => ({
-            name,
-            phone: "",
-            college: "",
-            faceEncoding: null,
-            verificationStatus: false,
-        }));
+        };
+    });
 
     return {
         id: r.id || crypto.randomUUID().slice(0, 8),
@@ -422,20 +422,21 @@ function migrateRegistration(r: any): Registration {
         status: r.status || "In Process",
         faceImage: r.faceImage || null,
         qrTokenUsed: r.qrTokenUsed || false,
+        scannedAt: r.scannedAt,
     };
 }
 
 export function getRegistrations(hackathonId?: string): Registration[] {
     // Migrate legacy single-format
-    const legacySingle = readArray<any>("user_registrations");
-    const current = readArray<any>(KEYS.REGISTRATIONS);
+    const legacySingle = readArray<StoredRegistration>("user_registrations");
+    const current = readArray<StoredRegistration>(KEYS.REGISTRATIONS);
 
     if (legacySingle.length > 0 && current.length === 0) {
         const migrated = legacySingle.map(migrateRegistration);
         writeArray(KEYS.REGISTRATIONS, migrated);
     }
 
-    const result = readArray<any>(KEYS.REGISTRATIONS).map(migrateRegistration);
+    const result = readArray<StoredRegistration>(KEYS.REGISTRATIONS).map(migrateRegistration);
     if (hackathonId) return result.filter((r) => r.hackathonId === hackathonId);
     return result;
 }
@@ -482,7 +483,7 @@ export function addRegistration(reg: Registration): void {
     all.push(reg);
     writeArray(KEYS.REGISTRATIONS, all);
     // Update legacy key
-    const legacy = readArray<any>("user_registrations");
+    const legacy = readArray<StoredRegistration>("user_registrations");
     legacy.push({
         userName: reg.userName,
         userEmail: reg.userEmail,
@@ -498,7 +499,7 @@ export function addRegistration(reg: Registration): void {
 }
 
 export function updateRegistration(id: string, updates: Partial<Registration>): void {
-    const all = readArray<any>(KEYS.REGISTRATIONS).map(migrateRegistration);
+    const all = readArray<StoredRegistration>(KEYS.REGISTRATIONS).map(migrateRegistration);
     const idx = all.findIndex((r) => r.id === id);
     if (idx !== -1) {
         all[idx] = { ...all[idx], ...updates };
@@ -513,7 +514,7 @@ export function updateMemberVerification(
     verificationStatus: boolean,
     faceEncoding?: string | null
 ): void {
-    const all = readArray<any>(KEYS.REGISTRATIONS).map(migrateRegistration);
+    const all = readArray<StoredRegistration>(KEYS.REGISTRATIONS).map(migrateRegistration);
     const regIdx = all.findIndex((r) => r.id === regId);
     if (regIdx !== -1) {
         const reg = all[regIdx];
@@ -535,7 +536,7 @@ export function updateMemberVerification(
 /** Fix 2: Remove a team member by index (only creator can call). Cannot remove self (idx 0). */
 export function removeTeamMember(regId: string, memberIdx: number): boolean {
     if (memberIdx <= 0) return false; // Cannot remove creator (member 0)
-    const all = readArray<any>(KEYS.REGISTRATIONS).map(migrateRegistration);
+    const all = readArray<StoredRegistration>(KEYS.REGISTRATIONS).map(migrateRegistration);
     const regIdx = all.findIndex((r) => r.id === regId);
     if (regIdx === -1) return false;
     const reg = all[regIdx];
@@ -549,7 +550,7 @@ export function removeTeamMember(regId: string, memberIdx: number): boolean {
 
 /** Fix 2: Update a team member's editable fields */
 export function updateTeamMember(regId: string, memberIdx: number, updates: Partial<TeamMember>): void {
-    const all = readArray<any>(KEYS.REGISTRATIONS).map(migrateRegistration);
+    const all = readArray<StoredRegistration>(KEYS.REGISTRATIONS).map(migrateRegistration);
     const regIdx = all.findIndex((r) => r.id === regId);
     if (regIdx === -1) return;
     const reg = all[regIdx];
@@ -562,7 +563,7 @@ export function updateTeamMember(regId: string, memberIdx: number, updates: Part
 
 /** Fix 5: Lock entry QR — sets qrTokenUsed=true. Returns false if already locked (duplicate). */
 export function lockEntryQR(userEmail: string, hackathonId: string): boolean {
-    const all = readArray<any>(KEYS.REGISTRATIONS).map(migrateRegistration);
+    const all = readArray<StoredRegistration>(KEYS.REGISTRATIONS).map(migrateRegistration);
     const regIdx = all.findIndex((r) => r.userEmail === userEmail && r.hackathonId === hackathonId);
     if (regIdx === -1) return false;
     if (all[regIdx].qrTokenUsed) return false; // Already scanned — duplicate
@@ -740,7 +741,7 @@ export function findQRByToken(tokenHash: string): QRToken | undefined {
 }
 
 /** Fix 6: Stateful QR Scan Processor — handles progression and locking. */
-export async function processQRScan(payload: any): Promise<{
+export async function processQRScan(payload: { type: QRToken["type"]; hackathonId: string; userId?: string; userEmail?: string; teamName?: string; token?: string; timestamp?: number; hash?: string; day?: number }): Promise<{
     success: boolean;
     message: string;
     result: "valid" | "duplicate" | "invalid" | "expired"
@@ -843,7 +844,7 @@ export function addNotification(notification: Notification): void {
    ================================================================ */
 
 /** Migrate ticket: add hackathonId if missing */
-function migrateTicket(t: any): Ticket {
+function migrateTicket(t: Partial<Ticket>): Ticket {
     return {
         id: t.id || crypto.randomUUID().slice(0, 8),
         subject: t.subject || "",
@@ -858,7 +859,7 @@ function migrateTicket(t: any): Ticket {
 }
 
 export function getTickets(studentEmail?: string, hackathonId?: string): Ticket[] {
-    const all = readArray<any>(KEYS.TICKETS).map(migrateTicket);
+    const all = readArray<Partial<Ticket>>(KEYS.TICKETS).map(migrateTicket);
     let result = all;
     if (studentEmail) result = result.filter((t) => t.studentEmail === studentEmail);
     if (hackathonId && hackathonId !== "all") result = result.filter((t) => t.hackathonId === hackathonId || t.hackathonId === "global");
@@ -872,7 +873,7 @@ export function createTicket(ticket: Ticket): void {
 }
 
 export function updateTicket(ticketId: string, updates: Partial<Ticket>): void {
-    const all = readArray<any>(KEYS.TICKETS).map(migrateTicket);
+    const all = readArray<Partial<Ticket>>(KEYS.TICKETS).map(migrateTicket);
     const idx = all.findIndex((t) => t.id === ticketId);
     if (idx !== -1) {
         all[idx] = { ...all[idx], ...updates };
@@ -881,7 +882,7 @@ export function updateTicket(ticketId: string, updates: Partial<Ticket>): void {
 }
 
 export function addTicketMessage(ticketId: string, msg: TicketMessage): void {
-    const all = readArray<any>(KEYS.TICKETS).map(migrateTicket);
+    const all = readArray<Partial<Ticket>>(KEYS.TICKETS).map(migrateTicket);
     const idx = all.findIndex((t) => t.id === ticketId);
     if (idx !== -1) {
         all[idx].messages.push(msg);

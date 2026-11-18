@@ -3,7 +3,6 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import LandingNavbar from "@/components/landing/LandingNavbar";
 import RolePreview from "@/components/landing/RolePreview";
-import { USE_EXPRESS } from "@/services/apiClient";
 
 describe("Landing page interactions", () => {
   it("switches previews and sends privileged roles to login", () => {
@@ -16,7 +15,7 @@ describe("Landing page interactions", () => {
     ]) {
       fireEvent.mouseDown(screen.getByRole("tab", { name: tab }), { button: 0, ctrlKey: false });
       const panel = screen.getByRole("tabpanel");
-      expect(within(panel).getByRole("link", { name: link })).toHaveAttribute("href", `/auth/${USE_EXPRESS && role !== "student" ? "login" : "signup"}?role=${role}`);
+      expect(within(panel).getByRole("link", { name: link })).toHaveAttribute("href", `/auth/${role !== "student" ? "login" : "signup"}?role=${role}`);
       expect(screen.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
     }
   });

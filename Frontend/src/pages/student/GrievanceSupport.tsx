@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // GrievanceSupport.tsx — Feature 2: Student grievance submission + AI help
 // Students can submit, track grievances. AI chatbot moved here from admin.
@@ -44,7 +45,7 @@ function parseInlineFormatting(text: string) {
 function renderFormattedMessage(text: string) {
   const lines = text.split("\n");
   return lines.map((line, idx) => {
-    const bulletMatch = line.match(/^(\s*)[*\-]\s+(.*)$/);
+    const bulletMatch = line.match(/^(\s*)[*-]\s+(.*)$/);
     if (bulletMatch) {
       const content = bulletMatch[2];
       return (
@@ -93,15 +94,12 @@ export default function GrievanceSupport() {
         const regs = getUserRegistrations(user.email);
         setMyHackathons(regs.map((r) => ({ id: r.hackathonId, name: r.hackathonName })));
         if (regs.length > 0) setForm((f) => ({ ...f, hackathonId: regs[0].hackathonId }));
+        const loadTickets = () => setTickets(getTickets(user.email));
         loadTickets();
         const iv = setInterval(loadTickets, 5000);
         return () => clearInterval(iv);
     }, [user]);
 
-    const loadTickets = () => {
-        if (!user?.email) return;
-        setTickets(getTickets(user.email));
-    };
 
     const handleSubmit = () => {
         if (!form.title.trim() || !form.description.trim()) {
@@ -144,7 +142,7 @@ export default function GrievanceSupport() {
                 const cleanRes = res.includes("ACTION:") ? res : "ACTION:" + res;
                 const parts = cleanRes.split("|");
                 const subject = parts[1] || "Support Request";
-                const category = (parts[2] || "Other") as any;
+                const category = parts[2] || "Other";
 
                 const ticket: Ticket = {
                     id: `T-${crypto.randomUUID().slice(0, 8)}`,
@@ -171,8 +169,8 @@ export default function GrievanceSupport() {
             } else {
                 setChatMessages((prev) => [...prev, { role: "assistant", content: res }]);
             }
-        } catch (err: any) {
-            setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
+        } catch (err: unknown) {
+            setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errorMessage(err)}` }]);
         } finally {
             setChatLoading(false);
         }
@@ -222,7 +220,7 @@ export default function GrievanceSupport() {
                                         onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                                         className="w-full rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none" />
                                     <div className="grid gap-4 sm:grid-cols-2">
-                                        <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as any }))}
+                                        <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                                             className="rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm focus:border-primary focus:outline-none">
                                             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                                         </select>

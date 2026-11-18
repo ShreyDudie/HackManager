@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // FaceVerify.tsx — Student face capture for registration verification
 // Uses browser getUserMedia to capture live photo.
@@ -127,10 +128,10 @@ export default function FaceVerify() {
                 setCapturedImage(imageData);
                 setAlreadyCaptured(true);
                 stopCamera();
-            } catch (err: any) {
+            } catch (err: unknown) {
                 toast({
                     title: "Registration Failed",
-                    description: err.message || "Could not save face embedding to backend.",
+                    description: errorMessage(err, "Could not save face embedding to backend."),
                     variant: "destructive",
                 });
             } finally {

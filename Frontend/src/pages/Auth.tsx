@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth, UserRole } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-// ── Fix 1: Validation helpers ──
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+$/;
 const PHONE_REGEX = /^\d{10}$/;
+const STRICT_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export default function Auth() {
   const location = useLocation();
   const isSignup = location.pathname.includes("signup");
   const [searchParams] = useSearchParams();
-  const role = (searchParams.get("role") || "student") as UserRole;
+  const requestedRole = searchParams.get("role");
+  const role: UserRole = requestedRole === "admin" || requestedRole === "judge" ? requestedRole : "student";
   const navigate = useNavigate();
   const { login, signup } = useAuth();
 
@@ -30,7 +31,7 @@ export default function Auth() {
     if (!touched[field]) return "";
     switch (field) {
       case "name": return !name.trim() ? "Name is required" : "";
-      case "email": return !email.trim() ? "Email is required" : !EMAIL_REGEX.test(email) ? "Invalid email format" : "";
+      case "email": return !email.trim() ? "Email is required" : isSignup && !STRICT_EMAIL_REGEX.test(email) ? "Invalid email format" : "";
       case "phone": return phone.trim() && !PHONE_REGEX.test(phone) ? "Must be exactly 10 digits" : "";
       case "password":
         if (!password) return "Password is required";
@@ -69,6 +70,7 @@ export default function Auth() {
     }
   };
 
+  if (isSignup && role !== "student") return <Navigate replace to={`/auth/login?role=${role}`} />;
   return (
     <div className="flex min-h-screen items-center justify-center pt-16">
       <motion.div
@@ -108,7 +110,8 @@ export default function Auth() {
             <label htmlFor="auth-email" className="mb-1.5 block text-sm font-medium">Email</label>
             <input
               id="auth-email" autoComplete="email"
-              type="email"
+              type="text"
+              inputMode="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -165,7 +168,7 @@ export default function Auth() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        {role === "student" && <p className="mt-6 text-center text-sm text-muted-foreground">
           {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
           <a
             href={isSignup ? `/auth/login?role=${role}` : `/auth/signup?role=${role}`}
@@ -173,7 +176,7 @@ export default function Auth() {
           >
             {isSignup ? "Login" : "Sign Up"}
           </a>
-        </p>
+        </p>}
       </motion.div>
     </div>
   );

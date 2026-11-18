@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { USE_EXPRESS } from "@/services/apiClient";
 import {
   ArrowUpRight,
   Check,
@@ -134,7 +133,7 @@ export default function RolePreview() {
                   ))}
                 </ul>
                 <Link
-                  to={`/auth/${USE_EXPRESS && item.id !== "student" ? "login" : "signup"}?role=${item.id}`}
+                  to={`/auth/${item.id !== "student" ? "login" : "signup"}?role=${item.id}`}
                   className="landing-text-link"
                 >
                   {item.cta}

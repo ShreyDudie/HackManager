@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // ai.ts — Features 4 & 5: LinkedIn post gen + real AI scoring with PDF text
 // Groq API wrapper. Fetches actual README.md from GitHub.
@@ -57,11 +58,8 @@ async function chatCompletion(messages: ChatMessage[], maxTokens = 1024): Promis
 
             const data = await res.json();
             return data.choices?.[0]?.message?.content || "";
-        } catch (error: any) {
-            const isRateLimit =
-                error.message?.includes("rate limit") ||
-                error.message?.includes("429") ||
-                error.message?.includes("Rate limit");
+        } catch (error: unknown) {
+            const isRateLimit = /rate limit|429/i.test(errorMessage(error));
             
             if (isRateLimit && i < models.length - 1) {
                 console.warn(`Rate limit warning caught. Falling back from ${models[i]} to ${models[i+1]}...`);
@@ -130,11 +128,11 @@ Topics: ${meta.topics ? meta.topics.join(", ") : "None"}\n\n`;
             const treeRes = await fetch(treeUrl, { signal: AbortSignal.timeout(7000) });
             if (treeRes.ok) {
                 const treeData = await treeRes.json();
-                const treeList = treeData.tree || [];
+                const treeList: { path: string }[] = treeData.tree || [];
 
                 // Build directory structure overview (up to 3 levels)
                 const structureList = treeList
-                    .map((f: any) => f.path)
+                    .map((f) => f.path)
                     .filter((p: string) => {
                         const depth = p.split("/").length;
                         const excluded = ["node_modules", "build", "dist", ".next", "__pycache__", ".git", "vendor", "venv", ".idea", ".vscode"].some(d => p.includes(d + "/"));
@@ -145,7 +143,7 @@ Topics: ${meta.topics ? meta.topics.join(", ") : "None"}\n\n`;
                 treeText = `## DIRECTORY STRUCTURE (3 Levels Deep)\n${structureList.join("\n")}\n\n`;
 
                 // Search for README anywhere in the tree (case-insensitive)
-                const readmeFile = treeList.find((f: any) => {
+                const readmeFile = treeList.find((f) => {
                     const pathLower = f.path.toLowerCase();
                     return pathLower === "readme.md" || pathLower.endsWith("/readme.md") ||
                            pathLower === "readme.txt" || pathLower.endsWith("/readme.txt") ||
@@ -166,7 +164,7 @@ Topics: ${meta.topics ? meta.topics.join(", ") : "None"}\n\n`;
                 }
 
                 // Detect dependency files
-                const depFiles = treeList.filter((f: any) => {
+                const depFiles = treeList.filter((f) => {
                     const name = f.path.split("/").pop();
                     return ["package.json", "requirements.txt", "pyproject.toml", "pom.xml", "build.gradle", "Cargo.toml"].includes(name);
                 }).slice(0, 3);
@@ -183,7 +181,7 @@ Topics: ${meta.topics ? meta.topics.join(", ") : "None"}\n\n`;
                 }
 
                 // Fetch core code entry points
-                const coreFiles = treeList.filter((f: any) => {
+                const coreFiles = treeList.filter((f) => {
                     const path = f.path.toLowerCase();
                     const isCode = path.endsWith(".py") || path.endsWith(".ts") || path.endsWith(".tsx") || path.endsWith(".js") || path.endsWith(".go");
                     const isEntry = path.includes("main.") || path.includes("app.") || path.includes("index.") || path.includes("server.") || path.includes("manage.py");
@@ -241,8 +239,8 @@ Topics: ${meta.topics ? meta.topics.join(", ") : "None"}\n\n`;
 
         // Return compiled representation (limit total length to keep token usage optimized)
         return { content: contentParts.join("\n\n").slice(0, 7000), source: "readme" };
-    } catch (err: any) {
-        return { content: null, source: "blocked", error: err.message || "Fetch failed" };
+    } catch (err: unknown) {
+        return { content: null, source: "blocked", error: errorMessage(err, "Fetch failed") };
     }
 }
 
@@ -581,8 +579,8 @@ Otherwise, NEVER use the ACTION:CREATE_TICKET format. Just answer normally.`,
     try {
         const response = await chatCompletion(messages, 500);
         return response || "I'm sorry, I couldn't process that. Please try again.";
-    } catch (err: any) {
-        return `Sorry, I'm having trouble connecting. Error: ${err?.message || "Unknown error"}`;
+    } catch (err: unknown) {
+        return `Sorry, I'm having trouble connecting. Error: ${errorMessage(err, "Unknown error")}`;
     }
 }
 

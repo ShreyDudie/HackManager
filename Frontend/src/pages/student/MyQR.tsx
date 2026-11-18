@@ -37,7 +37,7 @@ export default function MyQR() {
     const { user } = useAuth();
 
     // Multi-hackathon support: pick active hackathon
-    const [registrations, setRegistrations] = useState<any[]>([]);
+    const [registrations, setRegistrations] = useState<ReturnType<typeof getUserRegistrations>>([]);
     const [activeHackathonId, setActiveHackathonId] = useState<string>("");
 
     // QR state

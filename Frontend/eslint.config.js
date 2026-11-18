@@ -23,4 +23,15 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  // shadcn generates public variant helpers, hooks, and extendable props.
+  {
+    files: ["src/components/ui/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": ["warn", {
+        allowConstantExport: true,
+        allowExportNames: ["badgeVariants", "buttonVariants", "useFormField", "navigationMenuTriggerStyle", "useSidebar", "toast", "toggleVariants"],
+      }],
+      "@typescript-eslint/no-empty-object-type": ["error", { allowInterfaces: "with-single-extends" }],
+    },
+  },
 );

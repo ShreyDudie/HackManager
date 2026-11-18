@@ -1,8 +1,8 @@
 # AGENTS.md — HackManager AI Agent Guide
 
-## Migration update (26 October 2026)
+## Runtime update (18 November 2026)
 
-`backend-node/` contains the Express + TypeScript API with Drizzle SQLite, bcrypt, and JWT. `services/face-service/` retains Python vision work. `VITE_BACKEND_MODE=express` selects the connected event/team/submission/check-in frontend in `Frontend/src/pages/events/`; legacy mode retains the original pages and Django sync. Do not enable legacy sync in Express mode or silently mix data stores. See `docs/migration-status.md` for remaining features and `docs/express-development.md` for setup and Playwright CLI tests. The Django layout below describes the preserved legacy backend, not the new API. Keep all legacy records and biometric assets intact until the import/rehearsal phase is completed.
+The sole active API is in `backend-node/` (Express, TypeScript, Drizzle SQLite, bcrypt and JWT). `services/face-service/` runs Python vision. Use the root README for startup and deployment. The frontend exclusively mounts ExpressRoutes and uses no legacy sync or backend mode flag. `backend/` is an offline recovery snapshot. Preserve original records, media, old password compatibility and the private raw archive. See `docs/migration-status.md` for the import procedure. Treat the older Django layout, commands and endpoints below as historical reference only.
 
 This file provides instructions and context for AI coding agents (such as Antigravity, Claude Code, GitHub Copilot, etc.) working on the **HackManager** codebase.
 

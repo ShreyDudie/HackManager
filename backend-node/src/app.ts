@@ -8,6 +8,7 @@ import { faceRouter } from "./modules/face/routes";
 import { hackathonRouter } from "./modules/hackathons/routes";
 import { mediaRouter, uploadRouter } from "./modules/media/routes";
 import { submissionRouter } from "./modules/submissions/routes";
+import { workflows } from "./modules/events/workflows";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -22,4 +23,5 @@ app.use("/api/hackathons", hackathonRouter);
 app.use("/api/hackathons", submissionRouter);
 app.use("/api/hackathons", checkinRouter);
 app.use("/api/check-ins", checkinRedemptionRouter);
+app.use("/api", workflows);
 app.use(errorHandler);

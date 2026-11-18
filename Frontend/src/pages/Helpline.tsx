@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 // =============================================================================
 // Helpline.tsx — Patches 10 & 11: hackathonId filter + AI auto-ticket create
 // Admin can filter tickets by hackathon. AI chatbot detects "create ticket" intent.
@@ -171,8 +172,8 @@ export default function Helpline() {
       } else {
         setChatMessages((prev) => [...prev, { role: "assistant", content: response }]);
       }
-    } catch (err: any) {
-      setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
+    } catch (err: unknown) {
+      setChatMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errorMessage(err)}` }]);
     } finally {
       setChatLoading(false);
     }

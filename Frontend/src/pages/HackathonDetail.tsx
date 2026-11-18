@@ -97,6 +97,8 @@ async function compareImages(base64A: string, base64B: string): Promise<number> 
   });
 }
 
+type TeamScore = Pick<JudgeAssignment, "aiScore" | "judgeScore"> & { team: string };
+
 export default function HackathonDetail() {
   const { id } = useParams();
 
@@ -115,7 +117,7 @@ export default function HackathonDetail() {
   const [announcements, setAnnouncements] = useState<Notification[]>([]);
   const [participants, setParticipants] = useState<Registration[]>([]);
   const [judgeAssignments, setJudgeAssignments] = useState<JudgeAssignment[]>([]);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<(TeamScore & { rank: number; final: number })[]>([]);
 
   // Patch 7: live judge list
   const [judges, setJudges] = useState<Judge[]>([]);
@@ -132,7 +134,7 @@ export default function HackathonDetail() {
   const streamRef = useRef<MediaStream | null>(null);
 
   function buildLeaderboard(assignments: JudgeAssignment[], weight: number) {
-    const teamScores: Record<string, any> = {};
+    const teamScores: Record<string, TeamScore> = {};
     assignments.forEach((a) => {
       if (!teamScores[a.teamName]) {
         teamScores[a.teamName] = { team: a.teamName, aiScore: a.aiScore, judgeScore: a.judgeScore };
@@ -145,13 +147,13 @@ export default function HackathonDetail() {
       }
     });
     const entries = Object.values(teamScores)
-      .map((t: any) => {
+      .map((t) => {
         const ai = t.aiScore || 0;
         const judge = t.judgeScore || 0;
         return { ...t, final: Math.round((weight / 100) * ai + ((100 - weight) / 100) * judge) };
       })
-      .sort((a: any, b: any) => b.final - a.final)
-      .map((e: any, i: number) => ({ rank: i + 1, ...e }));
+      .sort((a, b) => b.final - a.final)
+      .map((e, i) => ({ rank: i + 1, ...e }));
     setLeaderboard(entries);
   }
 
@@ -207,7 +209,7 @@ export default function HackathonDetail() {
     toast({ title: "Round removed" });
   };
 
-  const updateRound = (roundId: string, field: keyof Round, value: any) => {
+  const updateRound = <K extends keyof Round,>(roundId: string, field: K, value: Round[K]) => {
     const updated = rounds.map((r) => r.id === roundId ? { ...r, [field]: value } : r);
     setRounds(updated);
     if (id) updateHackathon(id, { rounds: updated });
@@ -391,7 +393,7 @@ export default function HackathonDetail() {
           variant: "destructive",
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Fallback to grayscale client-side comparison if server fails/unreachable
       toast({
         title: "Server Verification Offline",
@@ -510,7 +512,7 @@ export default function HackathonDetail() {
                         <div><Label className="text-xs">Deadline</Label><Input className="mt-1" type="date" value={r.deadline} onChange={(e) => updateRound(r.id, "deadline", e.target.value)} /></div>
                         <div>
                           <Label className="text-xs">Submission Type</Label>
-                          <Select value={r.submissionType} onValueChange={(v) => updateRound(r.id, "submissionType", v)}>
+                          <Select value={r.submissionType} onValueChange={(v) => updateRound(r.id, "submissionType", v as Round["submissionType"])}>
                             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="PPT">PPT</SelectItem>
@@ -829,7 +831,7 @@ export default function HackathonDetail() {
                             <select
                               value={t.status}
                               onChange={(e) => {
-                                updateTicket(t.id, { status: e.target.value as any });
+                                updateTicket(t.id, { status: e.target.value as Ticket["status"] });
                                 toast({ title: `Status → ${e.target.value}` });
                               }}
                               className="rounded-lg border border-border bg-secondary/50 px-2 py-1 text-xs"

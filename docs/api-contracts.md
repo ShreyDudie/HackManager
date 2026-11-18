@@ -28,3 +28,7 @@ Requesting another unused pass replaces its secret and invalidates the previous 
 | `GET /api/hackathons/:id/check-ins` | Admin bearer token | Returns server-side scan logs for an event. |
 
 Every new error has `{ "error": { "code", "message", "fields?" } }`. `/api/auth/sync/` is deliberately absent from the new API; its source records are preserved in `LegacyState` during import until their domain migrations are complete.
+
+Within `/api/hackathons/:id`, GET `/announcements` and GET `/leaderboard` are public. The event owner can POST `{message}` to `/announcements` or POST `{teamId,email}` to `/assignments` for an existing judge. Judges GET `/api/judge-assignments` and PUT `{score,feedback}` to `/api/judge-assignments/:id/score` on their own assignments. Scores are integers from 0 to 100.
+
+Students POST `{subject,message}` to the event's `/tickets` endpoint. GET returns only the student's own threads or, for the event owner, all event threads. Both can POST `{message}` to `/tickets/:ticket/messages`. Only the event owner can PATCH `/tickets/:ticket` with `{status}` (Open, In Progress, Resolved).

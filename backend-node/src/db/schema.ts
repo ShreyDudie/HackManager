@@ -113,3 +113,33 @@ export const checkinLogs = sqliteTable("checkin_logs", {
   message: text("message").notNull(),
   scannedAt: text("scanned_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const evaluations = sqliteTable("evaluations", {
+  id: text("id").primaryKey(),
+  teamId: text("team_id").notNull().references(() => registrations.id, { onDelete: "cascade" }),
+  judgeId: text("judge_id").notNull().references(() => users.id),
+  score: integer("score"),
+  feedback: text("feedback").notNull().default(""),
+}, (t) => [uniqueIndex("evaluation_team_judge").on(t.teamId, t.judgeId)]);
+
+export const announcements = sqliteTable("announcements", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => hackathons.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const tickets = sqliteTable("tickets", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => hackathons.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => users.id),
+  subject: text("subject").notNull(),
+  status: text("status").notNull().default("Open"),
+});
+
+export const ticketMessages = sqliteTable("ticket_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ticketId: text("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+  author: text("author").notNull().references(() => users.id),
+  message: text("message").notNull(),
+});

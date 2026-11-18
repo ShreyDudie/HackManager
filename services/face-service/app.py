@@ -2,7 +2,7 @@ import json
 import os
 from hmac import compare_digest
 
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 
 from face_processing import compare_embeddings, get_normalized_embedding
 from image_utils import decode_image
@@ -47,7 +47,7 @@ async def embedding(file: UploadFile = File(...), x_face_service_key: str | None
 
 
 @app.post("/internal/face/compare")
-async def compare(file: UploadFile = File(...), references: str = "[]", x_face_service_key: str | None = Header(default=None)):
+async def compare(file: UploadFile = File(...), references: str = Form(default="[]"), x_face_service_key: str | None = Header(default=None)):
     authorize(x_face_service_key)
     try:
         parsed_references = json.loads(references)

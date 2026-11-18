@@ -32,7 +32,7 @@ export default function PPTUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Multi-hackathon
-  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [registrations, setRegistrations] = useState<ReturnType<typeof getUserRegistrations>>([]);
   const [activeHackathonId, setActiveHackathonId] = useState("");
   const [rounds, setRounds] = useState<Round[]>([]);
   const [submissions, setSubmissions] = useState<PPTSubmission[]>([]);
@@ -52,7 +52,7 @@ export default function PPTUpload() {
       const regs = getUserRegistrations(user.email);
       setRegistrations(regs);
       const saved = localStorage.getItem("sq_active_hackathon_" + user.email);
-      const activeId = saved && regs.find((r: any) => r.hackathonId === saved) ? saved : regs[0]?.hackathonId || "";
+      const activeId = saved && regs.find((r) => r.hackathonId === saved) ? saved : regs[0]?.hackathonId || "";
       setActiveHackathonId(activeId);
     };
 
@@ -203,7 +203,7 @@ export default function PPTUpload() {
           {/* Hackathon switcher */}
           {registrations.length > 1 && (
             <div className="mb-6 flex flex-wrap gap-2">
-              {registrations.map((r: any) => (
+              {registrations.map((r) => (
                 <button key={r.hackathonId} onClick={() => {
                   setActiveHackathonId(r.hackathonId);
                   if (user?.email) localStorage.setItem("sq_active_hackathon_" + user.email, r.hackathonId);

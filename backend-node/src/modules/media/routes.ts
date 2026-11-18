@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import multer from "multer";
 import { db } from "../../config/db";
 import { env } from "../../config/env";
-import { fileUploads, hackathons, submissions } from "../../db/schema";
+import { evaluations, fileUploads, hackathons, submissions } from "../../db/schema";
 import { requireAuth, type AuthUser } from "../../middleware/auth";
 import { AppError } from "../../middleware/errors";
 
@@ -34,7 +34,10 @@ mediaRouter.get("/media/:id", requireAuth, async (request, response, next) => {
     const document = db.select().from(fileUploads).where(eq(fileUploads.id, String(request.params.id))).get();
     const user = response.locals.user as AuthUser;
     const organizerAccess = document && user.role === "admin" && db.select({ id: submissions.id }).from(submissions).innerJoin(hackathons, eq(submissions.hackathonId, hackathons.id)).where(and(eq(submissions.fileUploadId, document.id), eq(hackathons.ownerId, user.id))).get();
-    if (!document || (document.ownerId !== user.id && !organizerAccess)) throw new AppError(404, "FILE_NOT_FOUND", "File not found");
+    const judgeAccess = document && user.role === "judge" && db.select({ id: submissions.id }).from(submissions)
+      .innerJoin(evaluations, eq(evaluations.teamId, submissions.registrationId))
+      .where(and(eq(submissions.fileUploadId, document.id), eq(evaluations.judgeId, user.id))).get();
+    if (!document || (document.ownerId !== user.id && !organizerAccess && !judgeAccess)) throw new AppError(404, "FILE_NOT_FOUND", "File not found");
     const file = await readFile(path.join(env.UPLOAD_DIR, document.storedName)).catch(() => null);
     if (!file) throw new AppError(404, "FILE_NOT_FOUND", "File is no longer available");
     response.type(document.mimeType).attachment(document.originalName).send(file);

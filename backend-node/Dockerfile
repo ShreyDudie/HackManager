@@ -1,8 +1,8 @@
 FROM node:22-bookworm-slim
 WORKDIR /app
-COPY backend-node/package*.json ./
+COPY package*.json ./
 RUN npm ci
-COPY backend-node/ ./
+COPY . ./
 ENV NODE_ENV=production
 EXPOSE 8000
 CMD ["sh", "-c", "npm run db:migrate && npm start"]

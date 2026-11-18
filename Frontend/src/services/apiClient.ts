@@ -1,4 +1,3 @@
-export const USE_EXPRESS = import.meta.env.VITE_BACKEND_MODE === "express";
 export const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export class ApiError extends Error {

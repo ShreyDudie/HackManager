@@ -79,6 +79,46 @@ async (page) => {
     await page.getByText('This pass has already been redeemed', { exact: true }).waitFor();
     await student.getByRole('button', { name: 'Generate pass', exact: true }).click();
     await student.getByText('This check-in pass has already been used', { exact: true }).waitFor();
+    await page.getByLabel('Announcement', { exact: true }).fill('Demos start at noon');
+    await page.getByRole('button', { name: 'Post announcement' }).click();
+    await page.getByText('Announcement posted.').waitFor();
+    await page.getByLabel('Judge email').fill('judge@example.test');
+    await page.getByRole('button', { name: 'Assign judge' }).click();
+    await page.getByText('Judge assigned.').waitFor();
+    await student.reload();
+    await student.getByText('Demos start at noon').waitFor();
+    await student.getByLabel('Subject', { exact: true }).fill('Demo room');
+    await student.getByLabel('Question', { exact: true }).fill('Where do we present?');
+    await student.getByRole('button', { name: 'Open ticket' }).click();
+    await student.getByText('Ticket opened.').waitFor();
+    await page.reload();
+    await page.getByLabel('Reply', { exact: true }).fill('Room 12');
+    await page.getByRole('button', { name: 'Send reply' }).click();
+    await page.getByText('Reply sent.').waitFor();
+    await page.getByLabel('Ticket status').selectOption('Resolved');
+    await page.getByRole('button', { name: 'Update status' }).click();
+    await page.getByText('Status updated.').waitFor();
+    const judgeContext = await page.context().browser().newContext();
+    try {
+      const judge = await judgeContext.newPage();
+      track(judge);
+      await judge.goto('http://localhost:8080/auth/login?role=judge');
+      await judge.getByLabel('Email', {exact:true}).fill('judge@example.test');
+      await judge.getByLabel('Password', {exact:true}).fill('browser-test-password');
+      await judge.getByRole('button', {name:'Login', exact:true}).click();
+      const card = judge.getByRole('article').filter({hasText: teamName});
+      const download = judge.waitForEvent('download');
+      await card.getByRole('button', {name:'Download PDF'}).click();
+      if (await (await download).failure()) throw new Error('Judge PDF download failed');
+      await card.getByLabel('Score out of 100').fill('87');
+      await card.getByLabel('Feedback').fill('Clear demonstration');
+      await card.getByRole('button', {name:'Save evaluation'}).click();
+      await card.getByText('Evaluation saved.').waitFor();
+    } finally { await judgeContext.close(); }
+    await student.reload();
+    await student.getByText(teamName + ' — 87', {exact:true}).waitFor();
+    await student.getByRole('heading', {name:'Demo room · Resolved'}).waitFor();
+    await student.getByText('Room 12', {exact:false}).waitFor();
     for (const width of [320, 390, 768, 1440]) {
       await student.setViewportSize({ width, height: 900 });
       const overflow = await student.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
